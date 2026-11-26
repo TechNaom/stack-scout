@@ -5,7 +5,7 @@ Started: 2026-11-27
 ## Current
 
 - Stage: blueprint
-- Status: in progress   <!-- in progress | waiting for approval | approved | needs review -->
+- Status: waiting for approval   <!-- in progress | waiting for approval | approved | needs review -->
 
 ## Settings
 
@@ -24,7 +24,7 @@ Started: 2026-11-27
 | Stage | Status | Approved by | Date |
 |---|---|---|---|
 | ignite | approved | owner ("yes") | 2026-11-27 |
-| blueprint | in progress | | |
+| blueprint | waiting for approval | | |
 | assemble | not started | | |
 | build | not started | | |
 | test-flight | not started | | |
@@ -50,6 +50,8 @@ Started: 2026-11-27
   "recently relicensed".
 
 ## Log
+
+- 2026-11-27 Blueprint: ADRs 0001-0007, architecture v1, cold read by a fresh agent (11 questions + unnamed parts) answered in architecture.md; waiting for approval.
 
 - 2026-11-27 Ignite approved by the owner ("yes") after three review rounds. Blueprint started.
 
