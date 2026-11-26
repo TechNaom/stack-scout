@@ -24,7 +24,8 @@ a month."
 ## Why now
 Coding agents can now research live sources and ask structured questions in their own interface. Nothing
 open-source does the whole job (the only dedicated tool found,
-[hoklims/stacksfinder-mcp](https://github.com/hoklims/stacksfinder-mcp), had 9 stars on 2026-11-27); our own Idea to Orbit already has
+[hoklims/stacksfinder-mcp](https://github.com/hoklims/stacksfinder-mcp), had 9 stars on 2026-11-27 and no activity since 2026-01-29, about 10 months, close to the 12-month line our
+own rule R6 uses for "dead"); our own Idea to Orbit already has
 the engineering (installers, offline checks, evals, CI) to reuse.
 
 ## First version
