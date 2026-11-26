@@ -45,10 +45,13 @@ Started: 2026-11-27
 ## Open questions
 
 - Licence for Stack Scout itself: MIT (proposed).
-- The proposed eval bars in the PRD (20 test SOWs, 8 questions, 10 minutes, 12 months).
+- The proposed numbers in the PRD: 20 test SOWs, 8 questions, about 200 tool calls per run, 10 minutes of the
+  user's time and about 30 minutes of clock time, 12 months without activity counts as dead, 24 months for
+  "recently relicensed".
 
 ## Log
 
+- 2026-11-27 Second review: priorities made consistent (R12 must), cap 200, relicence window, success rows; waiting for approval.
 - 2026-11-27 Ignite review (8/10, five fixes plus smaller ones) applied to the brief and PRD; waiting for approval.
 - 2026-11-27 Owner chose: plugin first, CLI later; full output with optional ADRs; name Stack Scout; separate repo (Idea to Orbit integration later). Brief and PRD written; waiting for approval.
 
