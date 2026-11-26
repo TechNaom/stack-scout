@@ -26,6 +26,10 @@ Started: 2026-11-27
   interviews the user with clear multiple-choice questions (like Claude Code's plan-mode questions), researches live
   GitHub repos, and finalises the stack.
 
+- 2026-11-27 Owner: **a separate repo first.** Later, as a secondary plan, Idea to Orbit's planning stage
+  (Blueprint) integrates it to suggest the tech stack. Design it so another tool can call it (a skill or a command
+  with a clear input and output).
+
 ## Open questions
 
 - Where it runs: a Claude Code plugin (Claude's own question screen, no extra cost), a CLI with an API key, or a web app. (blocks: ignite)
