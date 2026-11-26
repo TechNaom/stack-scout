@@ -22,9 +22,18 @@ Option A.
   service" outcome (R7).
 - **`guard.py`** extracts the SOW's protected terms: proper nouns, names the user gave in the interview, and a
   `--private-terms` list. It blocks any query that contains them, so queries are built from generic capability
-  names only.
+  names only. A list of technology words (`data/tech-terms.txt`, built from GitHub's topic names) is never treated
+  as private, so "must run on Azure" can still search for Azure tools.
+- **Searches the scripts don't make:** the model's own web searches and page lookups (finding a pricing page,
+  extra candidates) don't go through `facts.py`. The skill runs `guard.py check "<query>"` before each of them.
+  **This can't be enforced in code.** Like the 200-call cap, an eval checks the session transcript: no web query
+  contains a planted private term.
 - **`validate.py`** checks the finished stack:
-  - every repository in `stack.json` is in the facts file, with matching numbers;
+  - every repository and service in `stack.json` is in the facts file. `stack.json` holds only references
+    (`subject`), never copied values; `stack.md` shows facts by rendering them from the facts file, so values can't
+    drift and are not compared;
+  - the model's own prose fields (`reason`, `why_not`, `risks`) contain no numbers and no licence names. A fact
+    written in prose ("40k stars, MIT") is rejected, so facts appear only as rendered values;
   - every managed service has a pricing link with a date, or "to verify";
   - the compatibility rules hold (R16): one main language and runtime per layer, libraries in that layer's
     ecosystem, no clashing major versions declared in their manifests.

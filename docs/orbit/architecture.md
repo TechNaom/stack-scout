@@ -268,3 +268,27 @@ A fresh agent planned the tasks from this design and listed where it would have 
   "default".
 - **Token redaction:** a test runs every script with a fake token and checks that it appears in no output, file or
   error message.
+
+## Blueprint review fixes (2026-11-27)
+
+An outside review (8.5/10) found these; each is now part of the design:
+
+1. **ADR 0006 now matches point 2 above:** values are rendered from the facts file, not compared.
+2. **No facts in prose:** `validate.py` rejects digits and licence names (from `data/licences.json`) in `reason`,
+   `why_not` and `risks`. Facts appear only as values rendered from the facts file.
+3. **Technology words are never private:** `data/tech-terms.txt`, built from GitHub's topic names, sits next to
+   `common-words.txt`. "Azure", "PostgreSQL", "React" and "Kubernetes" stay searchable.
+4. **The model's own searches:** the skill runs `guard.py check "<query>"` before any web search or page lookup it
+   makes itself. This can't be enforced in code, so a transcript eval checks it, as with the 200-call cap.
+5. **No-token mode is REST only** (GraphQL needs a token): basic facts for finalists, the rest "to verify", and a
+   prompt to run `gh auth login`.
+6. **Model-read prices are checked:** `facts.py record-price` fetches the URL and keeps the price only if the amount
+   appears in the page text. Otherwise the price is "to verify". Pages that draw prices with JavaScript therefore
+   come out as "to verify", which is honest.
+7. **Last activity** is the last commit by a non-bot author on the default branch, not `pushedAt` (ADR 0002).
+8. **Repository to package** uses deps.dev, which also gives the OpenSSF Scorecard (ADR 0003).
+9. **The licence file** is found through `/repos/{owner}/{repo}/license`, and renames are followed (ADR 0004).
+10. **`sow.py` reads tables** (`w:tbl`) in `.docx` files as well as paragraphs, row by row, with cells separated by
+    `|`, because SOWs often put their requirements in tables.
+11. **Non-interactive runs and the SOW-specific questions:** the up to 2 questions the model adds (not in the bank)
+    take the model's recommended option and are listed as assumed, with the question text, in `stack.json`.
