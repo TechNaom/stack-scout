@@ -1,17 +1,29 @@
-# Product state: Stack Scout (working name)
+# Product state: Stack Scout
 
 Started: 2026-11-27
 
 ## Current
 
 - Stage: ignite
-- Status: in progress   <!-- in progress | waiting for approval | approved | needs review -->
+- Status: waiting for approval   <!-- in progress | waiting for approval | approved | needs review -->
+
+## Settings
+
+- Code host: github (public repo TechNaom/stack-scout, to be created after the Ignite gate)
+- Work branch: main *(proposed)*
+- Release branch: main
+- Promotion: none
+- Builders: subagents
+- Fast tests: filled at Assemble's T1 (no code yet)
+- Full suite: filled at Assemble's T1
+- CI: GitHub Actions on Linux, Windows and macOS *(proposed, as in Idea to Orbit)*
+- Profile: startup (free, nothing hosted)
 
 ## Gates
 
 | Stage | Status | Approved by | Date |
 |---|---|---|---|
-| ignite | in progress | | |
+| ignite | waiting for approval | | |
 | blueprint | not started | | |
 | assemble | not started | | |
 | build | not started | | |
@@ -32,11 +44,11 @@ Started: 2026-11-27
 
 ## Open questions
 
-- Where it runs: a Claude Code plugin (Claude's own question screen, no extra cost), a CLI with an API key, or a web app. (blocks: ignite)
-- What it hands over: a stack document; plus a verified repo shortlist, reasons, risks and cost; or all of that as ADRs. (blocks: ignite)
-- Name. (blocks: ignite)
-- Success measures, and what is out of scope. (blocks: ignite)
+- Licence for Stack Scout itself: MIT (proposed).
+- The proposed eval bars in the PRD (20 test SOWs, 8 questions, 10 minutes, 12 months).
 
 ## Log
+
+- 2026-11-27 Owner chose: plugin first, CLI later; full output with optional ADRs; name Stack Scout; separate repo (Idea to Orbit integration later). Brief and PRD written; waiting for approval.
 
 - 2026-11-27 ignite started.
