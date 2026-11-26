@@ -4,8 +4,8 @@ Started: 2026-11-27
 
 ## Current
 
-- Stage: ignite
-- Status: waiting for approval   <!-- in progress | waiting for approval | approved | needs review -->
+- Stage: blueprint
+- Status: in progress   <!-- in progress | waiting for approval | approved | needs review -->
 
 ## Settings
 
@@ -23,8 +23,8 @@ Started: 2026-11-27
 
 | Stage | Status | Approved by | Date |
 |---|---|---|---|
-| ignite | waiting for approval | | |
-| blueprint | not started | | |
+| ignite | approved | owner ("yes") | 2026-11-27 |
+| blueprint | in progress | | |
 | assemble | not started | | |
 | build | not started | | |
 | test-flight | not started | | |
@@ -50,6 +50,8 @@ Started: 2026-11-27
   "recently relicensed".
 
 ## Log
+
+- 2026-11-27 Ignite approved by the owner ("yes") after three review rounds. Blueprint started.
 
 - 2026-11-27 Second review: priorities made consistent (R12 must), cap 200, relicence window, success rows; waiting for approval.
 - 2026-11-27 Ignite review (8/10, five fixes plus smaller ones) applied to the brief and PRD; waiting for approval.
