@@ -49,6 +49,7 @@ Started: 2026-11-27
 
 ## Log
 
+- 2026-11-27 Ignite review (8/10, five fixes plus smaller ones) applied to the brief and PRD; waiting for approval.
 - 2026-11-27 Owner chose: plugin first, CLI later; full output with optional ADRs; name Stack Scout; separate repo (Idea to Orbit integration later). Brief and PRD written; waiting for approval.
 
 - 2026-11-27 ignite started.

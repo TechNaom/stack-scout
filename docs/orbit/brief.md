@@ -23,17 +23,22 @@ a month."
 
 ## Why now
 Coding agents can now research live sources and ask structured questions in their own interface. Nothing
-open-source does the whole job (the only dedicated tool found has 9 stars); our own Idea to Orbit already has
+open-source does the whole job (the only dedicated tool found,
+[hoklims/stacksfinder-mcp](https://github.com/hoklims/stacksfinder-mcp), had 9 stars on 2026-11-27); our own Idea to Orbit already has
 the engineering (installers, offline checks, evals, CI) to reuse.
 
 ## First version
 1. A Claude Code plugin (owner, 2026-11-27: plugin first, CLI later).
 2. Reads a SOW (pasted text or a file).
-3. Interviews the user with Claude's question screen: few questions, only about what the SOW leaves open.
-4. Breaks the SOW into capabilities; searches and checks candidate projects live (stars, licence, last
-   activity, archived); drops dead or unsafe ones.
-5. Writes `stack.md`: the stack per layer, each choice with its reason and one rejected alternative, verified
-   projects, risks, and a monthly cost estimate at the stated scale; ADRs optional.
+3. Interviews the user with Claude's question screen: few questions, only about what the SOW leaves open, each with
+   an "I don't know, use the default" answer; or runs without questions when another tool calls it, listing
+   its assumptions.
+4. Breaks the SOW into capabilities; searches with generic terms only (never the client's names) and checks
+   candidate projects live: stars, licence, last activity, releases, contributors, known vulnerabilities; drops
+   dead, unsafe or wrongly licensed ones; checks that the picks fit together (language, runtime, versions).
+5. Writes `stack.md` (and `stack.json` for other tools): facts as of the run date, the stack per layer, each
+   choice with its reason and one rejected alternative, verified projects, managed services with dated pricing
+   links, risks, and a monthly cost estimate at the stated scale; ADRs optional.
 
 ## Not in the first version
 - The CLI for users without Claude Code (later).
@@ -47,6 +52,7 @@ the engineering (installers, offline checks, evals, CI) to reuse.
 - **No dead picks:** no archived project, and none without activity in the last 12 months unless stated as a
   deliberate choice.
 - **Short interview:** 8 questions or fewer for a typical SOW.
+- **Confidential stays confidential:** no client or project name in any search query (eval with a planted name).
 - **Useful:** on 5 real SOWs, the owner rates the stack 4 out of 5 or better.
 
 ## Constraints
