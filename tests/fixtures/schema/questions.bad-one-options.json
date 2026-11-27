@@ -1,0 +1,15 @@
+[
+  {
+    "id": "hosting",
+    "ask": "Where will it run?",
+    "options": [
+      "serverless"
+    ],
+    "default": "serverless",
+    "changes": [
+      "hosting",
+      "api"
+    ],
+    "rank": 1
+  }
+]

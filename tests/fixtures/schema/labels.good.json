@@ -1,0 +1,30 @@
+[
+  {
+    "id": "sow-01",
+    "file": "sow-01.md",
+    "format": "md",
+    "open_points": [
+      "hosting"
+    ],
+    "capabilities_min": 4,
+    "planted": {
+      "client_name": "Acme",
+      "client_name_is_topic": false,
+      "mismatch": "Asks for real-time updates but the budget allows batch only.",
+      "fake": [
+        "acme/not-a-real-repo"
+      ],
+      "archived": [
+        "owner/old-repo"
+      ]
+    }
+  },
+  {
+    "id": "sow-02",
+    "file": "sow-02.pdf",
+    "format": "pdf",
+    "open_points": [],
+    "capabilities_min": 0,
+    "planted": {}
+  }
+]

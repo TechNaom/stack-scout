@@ -1,0 +1,46 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "started",
+    "ended",
+    "script_calls",
+    "github_points",
+    "questions_asked",
+    "partial"
+  ],
+  "properties": {
+    "schema": {
+      "enum": [
+        1
+      ]
+    },
+    "started": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$"
+    },
+    "ended": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$"
+    },
+    "script_calls": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "github_points": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "questions_asked": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "partial": {
+      "type": "boolean"
+    }
+  }
+}

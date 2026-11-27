@@ -1,0 +1,32 @@
+{
+  "schema": 1,
+  "facts": [
+    {
+      "subject": "github:fastapi/fastapi",
+      "field": "stars",
+      "value": 80000,
+      "source": "http://api.github.com/x",
+      "fetched_at": "2026-11-27T10:00:00Z",
+      "by": "script"
+    },
+    {
+      "subject": "osv:PyPI/django",
+      "field": "open_advisories",
+      "value": null,
+      "source": "https://api.osv.dev/v1/query",
+      "fetched_at": "2026-11-27T10:00:01Z",
+      "by": "script",
+      "to_verify": "OSV did not answer"
+    },
+    {
+      "subject": "price:aws-lambda",
+      "field": "free_tier",
+      "value": {
+        "requests": 1000000
+      },
+      "source": "https://aws.amazon.com/lambda/pricing/",
+      "fetched_at": "2026-11-27T10:00:02Z",
+      "by": "model-read"
+    }
+  ]
+}

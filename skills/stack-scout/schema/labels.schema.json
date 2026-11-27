@@ -1,0 +1,100 @@
+{
+  "type": "array",
+  "items": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+      "id",
+      "file",
+      "format",
+      "open_points",
+      "capabilities_min",
+      "planted"
+    ],
+    "properties": {
+      "id": {
+        "type": "string"
+      },
+      "file": {
+        "type": "string"
+      },
+      "format": {
+        "enum": [
+          "md",
+          "txt",
+          "docx",
+          "pdf"
+        ]
+      },
+      "open_points": {
+        "type": "array",
+        "items": {
+          "type": "string",
+          "pattern": "^[a-z_]+$"
+        }
+      },
+      "capabilities_min": {
+        "type": "integer",
+        "minimum": 0
+      },
+      "planted": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [],
+        "properties": {
+          "client_name": {
+            "type": "string"
+          },
+          "client_name_is_topic": {
+            "type": "boolean"
+          },
+          "mismatch": {
+            "type": "string"
+          },
+          "fake": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^[^/\\s]+/[^/\\s]+$"
+            }
+          },
+          "archived": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^[^/\\s]+/[^/\\s]+$"
+            }
+          },
+          "dead": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^[^/\\s]+/[^/\\s]+$"
+            }
+          },
+          "bot_only": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^[^/\\s]+/[^/\\s]+$"
+            }
+          },
+          "relicensed": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^[^/\\s]+/[^/\\s]+$"
+            }
+          },
+          "vulnerable": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^[^/\\s]+/[^/\\s]+$"
+            }
+          }
+        }
+      }
+    }
+  }
+}
