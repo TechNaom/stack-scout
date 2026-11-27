@@ -1,0 +1,44 @@
+[
+  {
+    "id": "sow-01",
+    "file": "01-memo-generator.md",
+    "format": "md",
+    "open_points": ["private_names", "scale", "budget"],
+    "capabilities_min": 4,
+    "planted": {}
+  },
+  {
+    "id": "sow-02",
+    "file": "02-regulatory-filing.md",
+    "format": "md",
+    "open_points": ["language", "cloud", "distribute"],
+    "capabilities_min": 5,
+    "planted": {
+      "client_name": "Halvorsen Freight"
+    }
+  },
+  {
+    "id": "sow-03",
+    "file": "03-token-guard.md",
+    "format": "md",
+    "open_points": ["cloud", "scale"],
+    "capabilities_min": 4,
+    "planted": {}
+  },
+  {
+    "id": "sow-04",
+    "file": "04-support-ticket-triage.md",
+    "format": "md",
+    "open_points": ["private_names", "distribute", "language", "cloud", "budget"],
+    "capabilities_min": 5,
+    "planted": {}
+  },
+  {
+    "id": "sow-05",
+    "file": "05-document-search.md",
+    "format": "md",
+    "open_points": ["scale", "budget"],
+    "capabilities_min": 4,
+    "planted": {}
+  }
+]
