@@ -1,0 +1,9 @@
+{
+  "name": "stack-scout",
+  "version": "0.0.1",
+  "description": "An open-source Claude Code plugin that takes any statement of work, interviews you with clear multiple-choice questions, checks real open-source projects live on GitHub, and hands you a robust tech stack with reasons, risks, cost and optional decision records.",
+  "author": { "name": "Manohar Papasani", "url": "https://github.com/TechNaom" },
+  "homepage": "https://github.com/TechNaom/stack-scout",
+  "repository": "https://github.com/TechNaom/stack-scout",
+  "license": "MIT"
+}

@@ -1,0 +1,7 @@
+.env
+.env.*
+!.env.example
+__pycache__/
+.stack-scout/
+evals/results/
+.DS_Store

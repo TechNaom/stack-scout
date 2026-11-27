@@ -14,8 +14,8 @@ Started: 2026-11-27
 - Release branch: main
 - Promotion: none
 - Builders: subagents
-- Fast tests: filled at Assemble's T1 (no code yet)
-- Full suite: filled at Assemble's T1
+- Fast tests: python -m unittest discover -s tests -t . -v
+- Full suite: python -m unittest discover -s tests -t . -v && python tests/check.py
 - CI: GitHub Actions on Linux, Windows and macOS *(proposed, as in Idea to Orbit)*
 - Profile: startup (free, nothing hosted)
 
