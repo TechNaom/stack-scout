@@ -1,0 +1,15 @@
+{
+  "name": "stack-scout",
+  "owner": { "name": "TechNaom AI R&D Labs" },
+  "metadata": { "description": "An open-source Claude Code plugin that takes any statement of work, interviews you with clear multiple-choice questions, checks real open-source projects live on GitHub, and hands you a robust tech stack with reasons, risks, cost and optional decision records.", "version": "0.0.1" },
+  "plugins": [
+    {
+      "name": "stack-scout",
+      "source": "./",
+      "description": "An open-source Claude Code plugin that takes any statement of work, interviews you with clear multiple-choice questions, checks real open-source projects live on GitHub, and hands you a robust tech stack with reasons, risks, cost and optional decision records.",
+      "version": "0.0.1",
+      "author": { "name": "Manohar Papasani" },
+      "license": "MIT"
+    }
+  ]
+}
