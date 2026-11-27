@@ -17,6 +17,7 @@ import json
 import os
 import pathlib
 import re
+import secrets
 import subprocess
 import sys
 import tempfile
@@ -56,36 +57,95 @@ def _retry(action, what):
         raise CoreError(f"{what}: still busy after {RETRY_FOR} s: {exc.strerror or exc}") from None
 
 
+def _stale(path) -> bool:
+    try:
+        return time.time() - os.path.getmtime(path) > LOCK_STALE
+    except OSError:
+        return False
+
+
+def _put_back(side, lock) -> bool:
+    """Move side back to lock only if no lock exists now (never overwrite one)."""
+    try:
+        if os.name == "nt":
+            os.rename(side, lock)  # fails when lock exists
+        else:
+            os.link(side, lock)  # fails when lock exists
+            os.unlink(side)
+        return True
+    except OSError:
+        return False
+
+
+def _break_stale(lock) -> None:
+    """Remove lock if it is stale, without ever removing a fresh one.
+
+    The lock is first renamed to a unique side name, so only one waiter gets
+    it; the renamed file is checked again, because another waiter may have
+    broken the old lock and taken a fresh one since our first look. A fresh
+    one is put back (when the name is free); if it cannot be, it is left as a
+    side file and nothing is deleted.
+    """
+    side = lock.with_name(f"{lock.name}.{os.getpid()}-{secrets.token_hex(6)}")
+    try:
+        os.rename(lock, side)
+    except OSError:
+        return  # gone already, or another waiter renamed it first
+    if _stale(side):
+        try:
+            os.unlink(side)
+        except OSError:
+            pass
+    else:
+        _put_back(side, lock)
+
+
 @contextlib.contextmanager
 def locked(folder=None):
-    """Hold folder/.lock (default: state_dir()) for one read-merge-write."""
+    """Hold folder/.lock (default: state_dir()) for one read-merge-write.
+
+    The lock file holds a nonce (pid + random hex); release deletes it only
+    while it still holds our nonce, so a holder paused past LOCK_STALE never
+    deletes a successor's lock. Not re-entrant: calling meter(), add_facts()
+    or locked() on the same folder inside `with locked()` waits LOCK_WAIT
+    seconds and fails with CoreError. Staleness compares the file's mtime with
+    this machine's clock, so a state dir on a network share whose clock is
+    skewed by more than LOCK_STALE seconds may see live locks as stale (or
+    dead ones as fresh for longer). A folder where the lock cannot be created
+    for any reason but a held lock raises CoreError at once.
+    """
     folder = pathlib.Path(folder) if folder is not None else state_dir()
     folder.mkdir(parents=True, exist_ok=True)
     lock = folder / ".lock"
+    nonce = f"{os.getpid()}-{secrets.token_hex(8)}"
     deadline = time.monotonic() + LOCK_WAIT
     while True:
         try:
             fd = os.open(str(lock), os.O_CREAT | os.O_EXCL | os.O_WRONLY)
-            break
         except (FileExistsError, PermissionError):
-            try:
-                if time.time() - os.path.getmtime(lock) > LOCK_STALE:
-                    os.unlink(lock)
-                    continue
-            except OSError:
-                pass
+            if _stale(lock):
+                _break_stale(lock)
+                continue
             if time.monotonic() >= deadline:
                 raise CoreError(f"could not take the lock {lock.name} in {folder} "
                                 f"within {LOCK_WAIT} s") from None
             time.sleep(_PAUSE)
+            continue
+        except OSError as exc:
+            raise CoreError(f"cannot create the lock {lock.name} in {folder}: {exc}") from None
+        try:
+            os.write(fd, nonce.encode("ascii"))
+        finally:
+            os.close(fd)
+        break
     try:
         yield
     finally:
-        os.close(fd)
         try:
-            _retry(lambda: os.unlink(lock), "removing the lock")
-        except (OSError, CoreError):
-            pass
+            if _retry(lambda: lock.read_text(encoding="ascii"), "reading the lock") == nonce:
+                _retry(lambda: os.unlink(lock), "removing the lock")
+        except (OSError, ValueError):
+            pass  # gone or replaced: not ours to remove
 
 
 def now_utc() -> str:

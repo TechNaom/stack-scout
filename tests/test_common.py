@@ -8,6 +8,7 @@ import os
 import pathlib
 import subprocess
 import sys
+import time
 import unittest
 from unittest import mock
 
@@ -435,6 +436,35 @@ class AtomicWriteTest(CoreTest):
                 common.add_facts([_fact()], self.dir / "f.json")
         self.assertEqual(list(self.dir.iterdir()), [])
 
+    def _flaky_read(self, failures):
+        real = pathlib.Path.read_text
+        calls = []
+
+        def read_text(path, *args, **kwargs):
+            if path.name == "f.json":
+                calls.append(1)
+                if failures is None or len(calls) <= failures:
+                    raise PermissionError("busy")
+            return real(path, *args, **kwargs)
+
+        return mock.patch.object(pathlib.Path, "read_text", autospec=True, side_effect=read_text), calls
+
+    def test_read_retries_on_permission_error(self):
+        path = self.dir / "f.json"
+        common.add_facts([_fact()], path)
+        patch, calls = self._flaky_read(2)
+        with patch, mock.patch("common.time.sleep"):
+            self.assertEqual(len(common.load_facts(path)), 1)
+        self.assertEqual(len(calls), 3)
+
+    def test_read_gives_up_as_core_error(self):
+        path = self.dir / "f.json"
+        common.add_facts([_fact()], path)
+        patch, _ = self._flaky_read(None)
+        with patch, mock.patch("common.time.sleep"):
+            with self.assertRaisesRegex(common.CoreError, "f.json"):
+                common.load_facts(path)
+
     def test_meter_rejects_bool_and_float(self):
         for kwargs in ({"script_calls": True}, {"github_points": False}, {"questions_asked": 1.0}):
             with self.assertRaises(common.CoreError, msg=kwargs):
@@ -459,6 +489,56 @@ class LockTest(CoreTest):
                 common.meter()
         self.assertTrue((self.dir / ".lock").exists())  # not ours: left alone
         self.assertFalse((self.dir / "run.json").exists())
+
+    def test_stale_break_leaves_no_side_files(self):
+        lock = self.dir / ".lock"
+        lock.write_text("dead-holder", encoding="utf-8")
+        old = os.path.getmtime(lock) - 120
+        os.utime(lock, (old, old))
+        common.meter()
+        self.assertEqual(sorted(p.name for p in self.dir.iterdir()), ["run.json"])
+
+    def test_waiter_with_old_stale_view_does_not_steal_a_fresh_lock(self):
+        # Waiter A saw the old lock as stale; meanwhile B broke it and took a
+        # fresh one (content "B-nonce"). A's first getmtime answer is that old
+        # view; every later answer is the truth. A must not take B's lock.
+        lock = self.dir / ".lock"
+        lock.write_text("B-nonce", encoding="utf-8")
+        real = os.path.getmtime
+        answers = [time_of_old_view := real(lock) - 120]
+
+        def getmtime(path):
+            return answers.pop() if answers else real(path)
+
+        with mock.patch("common.os.path.getmtime", side_effect=getmtime), \
+                mock.patch("common.LOCK_WAIT", 0.3):
+            with self.assertRaisesRegex(common.CoreError, "lock"):
+                common.meter()
+        self.assertLess(time_of_old_view, real(lock))
+        self.assertEqual(lock.read_text(encoding="utf-8"), "B-nonce")
+        self.assertFalse((self.dir / "run.json").exists())
+
+    def test_lock_holds_a_nonce(self):
+        with common.locked(self.dir):
+            nonce = (self.dir / ".lock").read_text(encoding="utf-8")
+        self.assertIn(str(os.getpid()), nonce)
+        with common.locked(self.dir):
+            self.assertNotEqual((self.dir / ".lock").read_text(encoding="utf-8"), nonce)
+        self.assertFalse((self.dir / ".lock").exists())
+
+    def test_release_keeps_someone_elses_lock(self):
+        lock = self.dir / ".lock"
+        with common.locked(self.dir):
+            lock.unlink()  # ours was broken as stale while we were paused ...
+            lock.write_text("successor-nonce", encoding="utf-8")  # ... and taken by another
+        self.assertEqual(lock.read_text(encoding="utf-8"), "successor-nonce")
+
+    def test_unwritable_folder_fails_at_once(self):
+        start = time.monotonic()
+        with mock.patch("common.os.open", side_effect=OSError(30, "Read-only file system")):
+            with self.assertRaisesRegex(common.CoreError, "Read-only"):
+                common.meter()
+        self.assertLess(time.monotonic() - start, 1.0)
 
     def _workers(self, body, n=4):
         code = "import sys; sys.path.insert(0, sys.argv[1]); import common\n" + body
