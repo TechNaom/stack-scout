@@ -5,6 +5,12 @@ file says what happened on the way and what it taught. The learn skill reads it.
 
 | When | Kind | What | Commit |
 |---|---|---|---|
+| 2026-11-27 | Fix in review | **T2 code check:** NaN, Infinity and 1e400 passed as numbers (and in untyped slots); round 1 fixed only the typed fields, round 2 added `parse_float`. Missed by: the builder and the card (no non-finite rule). | fd7bc36 |
+| 2026-11-27 | Fix in review | **T2 code check:** Python regex is not JSON Schema regex: `$` matched before a trailing newline, `\d` matched Unicode digits; round 1 used `re.ASCII`, which broke Unicode `\s`; round 2 translates `\d`/`\w` only. Missed by: the builder; the card said only "use re.search". | fd7bc36 |
+| 2026-11-27 | Fix in review | **T2 code check:** deep nesting crashed the CLI (exit 120, no JSON); keyword values were never checked (`required: "ab"` looped over letters). Missed by: the builder; the card named only unknown keywords. | fd7bc36 |
+| 2026-11-27 | Fix in review | **T2 code check:** tests let 5 broken variants pass (no recursion into items/additionalProperties, dot-only paths, no type-name check, CLI exit 0 on bad file); bad fixtures were checked loosely. Fixed with pinned one-error expectations. Missed by: the builder. | fd7bc36 |
+| 2026-11-27 | Fix in review | **T2 code check:** schema name went straight into a path (`../x`), `1.0` vs integer undecided, nested enum bool/number mixed, BOM rejected, duplicate keys kept silently. Missed by: the builder and the card. | fd7bc36 |
+| 2026-11-27 | Change | **T2 done:** schemas and checker (PR #39). 61 tests, 7 checks, CI 6/6. | fd7bc36 |
 | 2026-11-27 | Fix in review | **T1 code check:** `tests/check.py` crashed on wrong JSON types (isinstance guards added) and printed non-ASCII badly on Windows (UTF-8 stdout). Missed by: the builder; the card did not name malformed manifests. | 407d3fe |
 | 2026-11-27 | Fix in review | **T1 code check:** no test of the checker's FAIL path (8 subprocess cases added; 6 fail on the old code). Missed by: the builder; the card asked only for the pass path. | 407d3fe |
 | 2026-11-27 | Fix in review | **T1 code check:** CI lacked a timeout, concurrency cancel, `persist-credentials: false`, `contents: read` and a main-only push trigger; `test_repo.py` needles added for each so undoing them fails. Missed by: the builder and the card (CI hardening not listed). | 407d3fe |

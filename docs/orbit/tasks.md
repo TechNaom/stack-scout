@@ -49,7 +49,7 @@ Product-wide conventions (every card follows them):
 | ID | Task | Serves | Test (written first) | Done check | Depends on | Size | Issue |
 |---|---|---|---|---|---|---|---|
 | T1 | Repository basics, licence and CI on 3 platforms | N5, N7 | `tests/test_repo.py`: CI file has the 3-OS matrix and runs both suites | CI green on Linux, Windows and macOS for the pull request | - | S | #1 (done, PR #38) |
-| T2 | Hand-written schemas and the schema checker | R12, N2 | `tests/test_schema.py`: good and bad examples for all 6 schemas | `python -m unittest tests.test_schema -v` OK | T1 | M | #2 |
+| T2 | Hand-written schemas and the schema checker | R12, N2 | `tests/test_schema.py`: good and bad examples for all 6 schemas | `python -m unittest tests.test_schema -v` OK | T1 | M | #2 (done, PR #39) |
 | T3 | First 5 labelled test SOWs | R2, N2, N3 | `tests/test_fixtures.py`: every SOW has a label entry that passes `labels.schema.json` | the fixture test is OK | T2 | M | #3 |
 | T4 | Shared core: clock, token, redaction, facts file, run meter, `run.py` | N1, N6, R9 | `tests/test_common.py` | the common test is OK | T2 | M | #4 |
 | T5 | HTTP client with back-off, and the mock API server | N6 | `tests/test_http.py` against `tests/mock_api.py` (200, 403, 429, Retry-After, 3 retries) | the http test is OK | T4 | M | #5 |
