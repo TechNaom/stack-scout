@@ -51,6 +51,7 @@ Started: 2026-11-27
 
 ## Log
 
+- 2026-11-27 T1 done (PR #38, squash 407d3fe): repo basics, MIT licence, plugin manifests, CI on 3 OS x Python 3.10/3.12. Tests 0 -> 9, `tests/check.py` 7 checks ok; CI 6/6 green on d070002. Task check pass; code check 0 must-fix, 5 should-fix, all fixed and re-checked. Next: T2 (#2).
 - 2026-11-27 Assemble approved by the owner; licence MIT. Issues #1-#37 created (labels M1-M4). Build starts with T1 (#1).
 
 - 2026-11-27 Assemble: tasks.md (4 milestones, 37 tasks, cards for M1's 12); two cold reads by fresh agents (12 + 11
