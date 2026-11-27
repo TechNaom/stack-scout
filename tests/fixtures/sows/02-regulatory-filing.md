@@ -1,10 +1,10 @@
 # Statement of Work: Customs and Safety Filing Assistant
 
-Client: Halvorsen Freight
+Client: Quillmere Haulage
 
 ## 1. Background
 
-Halvorsen Freight runs road and rail freight across several countries. Each
+Quillmere Haulage runs road and rail freight across several countries. Each
 shipment of regulated goods needs a set of customs declarations and safety
 filings, and each country has its own forms, deadlines and rules. Today a
 compliance team of about 60 people fills these forms by hand from shipping
