@@ -4,22 +4,40 @@ Supported keywords: type (a name or a list of names), required, properties,
 additionalProperties (false or a schema), items, enum, pattern, minimum,
 maximum, minItems, maxItems. Any other keyword raises
 ValueError("unsupported keyword: <k>"), so a schema cannot ask for more than
-this checker does.
+this checker does. Keyword values are checked, and patterns compiled, before
+any instance is looked at.
+
+Strict on purpose: bools are not numbers, 1.0 is not an integer, NaN and
+infinities are not numbers, and enum compares numbers by exact type.
+Patterns follow JSON Schema (ECMA) meaning: re.search, ASCII \\d \\w \\s, and
+an unescaped `$` matches only at the very end (not before a trailing "\\n").
 
 Usage: python schema.py <name> <file>
 Prints {"ok": true} (exit 0) or {"ok": false, "errors": [...]} (exit 2).
 """
 import json
+import math
 import pathlib
 import re
 import sys
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 
+NAMES = ("stack", "facts", "run", "questions", "answers", "labels")
+
 KEYWORDS = frozenset({
     "type", "required", "properties", "additionalProperties", "items", "enum",
     "pattern", "minimum", "maximum", "minItems", "maxItems",
 })
+
+
+def _finite_number(v):
+    if isinstance(v, bool):
+        return False
+    if isinstance(v, int):
+        return True
+    return isinstance(v, float) and math.isfinite(v)
+
 
 _TYPES = {
     "object": lambda v: isinstance(v, dict),
@@ -28,46 +46,118 @@ _TYPES = {
     "boolean": lambda v: isinstance(v, bool),
     "null": lambda v: v is None,
     "integer": lambda v: isinstance(v, int) and not isinstance(v, bool),
-    "number": lambda v: isinstance(v, (int, float)) and not isinstance(v, bool),
+    "number": _finite_number,
 }
 
-_NAME = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
+_NAME = re.compile(r"[A-Za-z_][A-Za-z0-9_]*")
+_PATTERNS = {}
 
 
 def load(name):
-    """Read ROOT/schema/<name>.schema.json."""
+    """Read ROOT/schema/<name>.schema.json for one of the known NAMES."""
+    if name not in NAMES:
+        raise ValueError(f"unknown schema: {name!r} (known: {', '.join(NAMES)})")
     path = ROOT / "schema" / f"{name}.schema.json"
     return json.loads(path.read_text(encoding="utf-8"))
 
 
+def _ecma(pattern):
+    """Turn every unescaped `$` outside a character class into `\\Z`."""
+    out = []
+    escaped = in_class = False
+    for ch in pattern:
+        if escaped:
+            out.append(ch)
+            escaped = False
+        elif ch == "\\":
+            out.append(ch)
+            escaped = True
+        elif in_class:
+            out.append(ch)
+            if ch == "]":
+                in_class = False
+        elif ch == "[":
+            out.append(ch)
+            in_class = True
+        elif ch == "$":
+            out.append(r"\Z")
+        else:
+            out.append(ch)
+    return "".join(out)
+
+
+def _compile(pattern):
+    if pattern not in _PATTERNS:
+        _PATTERNS[pattern] = re.compile(_ecma(pattern), re.ASCII)
+    return _PATTERNS[pattern]
+
+
+def _is_count(v):
+    return isinstance(v, int) and not isinstance(v, bool) and v >= 0
+
+
 def _check_keywords(node):
-    """Raise ValueError for any keyword the checker does not support."""
+    """Raise ValueError for an unsupported keyword or a malformed value."""
     if not isinstance(node, dict):
         raise ValueError(f"schema must be an object, got {type(node).__name__}")
     for key in node:
         if key not in KEYWORDS:
             raise ValueError(f"unsupported keyword: {key}")
     if "type" in node:
-        names = node["type"] if isinstance(node["type"], list) else [node["type"]]
-        for t in names:
-            if t not in _TYPES:
-                raise ValueError(f"unsupported type: {t}")
-    for sub in node.get("properties", {}).values():
-        _check_keywords(sub)
-    if isinstance(node.get("additionalProperties"), dict):
-        _check_keywords(node["additionalProperties"])
+        t = node["type"]
+        names = t if isinstance(t, list) else [t]
+        if not names or not all(isinstance(n, str) for n in names):
+            raise ValueError(f"type must be a string or a list of strings: {t!r}")
+        for n in names:
+            if n not in _TYPES:
+                raise ValueError(f"unsupported type: {n}")
+    if "required" in node:
+        r = node["required"]
+        if not (isinstance(r, list) and all(isinstance(k, str) for k in r)):
+            raise ValueError(f"required must be a list of strings: {r!r}")
+    if "enum" in node and not isinstance(node["enum"], list):
+        raise ValueError(f"enum must be a list: {node['enum']!r}")
+    if "properties" in node:
+        if not isinstance(node["properties"], dict):
+            raise ValueError("properties must be an object of schemas")
+        for sub in node["properties"].values():
+            _check_keywords(sub)
+    if "additionalProperties" in node:
+        extra = node["additionalProperties"]
+        if isinstance(extra, dict):
+            _check_keywords(extra)
+        elif not isinstance(extra, bool):
+            raise ValueError(f"additionalProperties must be a boolean or a schema: {extra!r}")
     if "items" in node:
         _check_keywords(node["items"])
+    for key in ("minimum", "maximum"):
+        if key in node and not _finite_number(node[key]):
+            raise ValueError(f"{key} must be a number: {node[key]!r}")
+    for key in ("minItems", "maxItems"):
+        if key in node and not _is_count(node[key]):
+            raise ValueError(f"{key} must be a non-negative integer: {node[key]!r}")
+    if "pattern" in node:
+        p = node["pattern"]
+        if not isinstance(p, str):
+            raise ValueError(f"pattern must be a string: {p!r}")
+        try:
+            _compile(p)
+        except re.error as exc:
+            raise ValueError(f"pattern does not compile: {p!r}: {exc}") from None
 
 
 def _key(path, key):
-    return f"{path}.{key}" if _NAME.match(key) else f"{path}[{json.dumps(key)}]"
+    return f"{path}.{key}" if _NAME.fullmatch(key) else f"{path}[{json.dumps(key)}]"
 
 
 def _same(a, b):
-    """Equality that keeps bools apart from numbers, as JSON does."""
-    if isinstance(a, bool) or isinstance(b, bool):
-        return isinstance(a, bool) and isinstance(b, bool) and a == b
+    """JSON equality: bools, ints and floats never equal each other, at any depth."""
+    if type(a) is not type(b):
+        return False
+    if isinstance(a, list):
+        return len(a) == len(b) and all(_same(x, y) for x, y in zip(a, b))
+    if isinstance(a, dict):
+        return a.keys() == b.keys() and all(_same(a[k], b[k]) for k in a)
     return a == b
 
 
@@ -80,9 +170,9 @@ def _walk(value, node, path, errors):
     if "enum" in node and not any(_same(value, e) for e in node["enum"]):
         errors.append(f"{path}: not one of {json.dumps(node['enum'])}")
     if isinstance(value, str) and "pattern" in node:
-        if not re.search(node["pattern"], value):
+        if not _compile(node["pattern"]).search(value):
             errors.append(f"{path}: does not match {node['pattern']}")
-    if _TYPES["number"](value):
+    if _finite_number(value):
         if "minimum" in node and value < node["minimum"]:
             errors.append(f"{path}: below minimum {node['minimum']}")
         if "maximum" in node and value > node["maximum"]:
@@ -118,23 +208,56 @@ def validate(instance, schema):
     return errors
 
 
-def main(argv):
-    sys.stdout.reconfigure(encoding="utf-8")
+class _Invalid(Exception):
+    """A problem with the input file, reported as one '$: ...' error."""
+
+
+def _no_constant(name):
+    raise _Invalid(f"$: {name} is not valid JSON")
+
+
+def _no_duplicates(pairs):
+    seen = {}
+    for key, value in pairs:
+        if key in seen:
+            raise _Invalid(f"$: duplicate key {json.dumps(key)}")
+        seen[key] = value
+    return seen
+
+
+def _read(file):
+    try:
+        text = pathlib.Path(file).read_bytes().decode("utf-8-sig")
+    except OSError as exc:
+        raise _Invalid(f"$: cannot read {file}: {exc}") from None
+    except UnicodeDecodeError as exc:
+        raise _Invalid(f"$: {file} is not UTF-8: {exc}") from None
+    try:
+        return json.loads(text, parse_constant=_no_constant, object_pairs_hook=_no_duplicates)
+    except ValueError as exc:
+        raise _Invalid(f"$: {file} is not JSON: {exc}") from None
+
+
+def _check(argv):
     if len(argv) != 2:
-        print(json.dumps({"ok": False, "errors": ["usage: schema.py <name> <file>"]}))
-        return 2
+        raise _Invalid("$: usage: schema.py <name> <file>")
     name, file = argv
     try:
         loaded = load(name)
     except (OSError, ValueError) as exc:
-        print(json.dumps({"ok": False, "errors": [f"$: cannot load schema {name}: {exc}"]}))
-        return 2
+        raise _Invalid(f"$: cannot load schema: {exc}") from None
+    return validate(_read(file), loaded)
+
+
+def main(argv):
+    if sys.stdout is not None and hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(encoding="utf-8")
     try:
-        instance = json.loads(pathlib.Path(file).read_text(encoding="utf-8"))
-    except (OSError, ValueError) as exc:
-        print(json.dumps({"ok": False, "errors": [f"$: cannot read {file}: {exc}"]}))
-        return 2
-    errors = validate(instance, loaded)
+        errors = _check(argv)
+    except _Invalid as exc:
+        errors = [str(exc)]
+    except Exception as exc:  # RecursionError on deep input, and anything else
+        errors = [f"$: {type(exc).__name__}: {exc}"]
     if errors:
         print(json.dumps({"ok": False, "errors": errors}))
         return 2
