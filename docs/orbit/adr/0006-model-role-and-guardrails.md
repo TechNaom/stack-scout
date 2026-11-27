@@ -23,7 +23,10 @@ Option A.
 - **`guard.py`** extracts the SOW's protected terms: proper nouns, names the user gave in the interview, and a
   `--private-terms` list. It blocks any query that contains them, so queries are built from generic capability
   names only. A list of technology words (`data/tech-terms.txt`, built from GitHub's topic names) is never treated
-  as private, so "must run on Azure" can still search for Azure tools.
+  as private, so "must run on Azure" can still search for Azure tools. **Names the user gives in the interview
+  or in `--private-terms` always beat the allowlist:** GitHub topics include company names (stripe, shopify,
+  salesforce), so if the client is Salesforce, "Salesforce" is blocked even though it is a topic. An eval plants a
+  client name that is also a GitHub topic.
 - **Searches the scripts don't make:** the model's own web searches and page lookups (finding a pricing page,
   extra candidates) don't go through `facts.py`. The skill runs `guard.py check "<query>"` before each of them.
   **This can't be enforced in code.** Like the 200-call cap, an eval checks the session transcript: no web query
@@ -32,8 +35,12 @@ Option A.
   - every repository and service in `stack.json` is in the facts file. `stack.json` holds only references
     (`subject`), never copied values; `stack.md` shows facts by rendering them from the facts file, so values can't
     drift and are not compared;
-  - the model's own prose fields (`reason`, `why_not`, `risks`) contain no numbers and no licence names. A fact
-    written in prose ("40k stars, MIT") is rejected, so facts appear only as rendered values;
+  - the model's own prose fields (`reason`, `why_not`, `risks`) contain no **fact-shaped text**: star or download
+    counts ("40k", "12,000 stars"), percentages, prices with a currency, and dates. Digits inside technology
+    words and version numbers are allowed (Python 3, OAuth 2.0, HTTP/2, S3, EC2, ISO 27001, Postgres 16). Licences
+    are matched as SPDX ids and full licence phrases ("Apache-2.0", "Apache License", "MIT License", "GPL-3.0"),
+    never a bare word, so "Apache Kafka" passes. A fact written in prose ("40k stars, MIT License") is rejected,
+    so facts appear only as rendered values;
   - every managed service has a pricing link with a date, or "to verify";
   - the compatibility rules hold (R16): one main language and runtime per layer, libraries in that layer's
     ecosystem, no clashing major versions declared in their manifests.

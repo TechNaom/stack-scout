@@ -252,7 +252,8 @@ A fresh agent planned the tasks from this design and listed where it would have 
   rendered from `stack.json` by `scripts/render.py`, which also enforces "no unlinked fact", because every fact it
   prints comes with its source link.
 - **The eval harness:** `tests/fixtures/sows/*.md` with `labels.json` (expected open points, planted mismatch,
-  planted client name, planted dead, relicensed and vulnerable projects). Offline script tests use a stdlib
+  planted client name, a planted client name that is also a GitHub topic, planted bot-only and dead, relicensed
+  and vulnerable projects). Offline script tests use a stdlib
   `http.server` mock of GitHub and OSV, including 403, 429 and `next_page_token` pages. Pressure scenarios run as in
   Idea to Orbit.
 - **The clock:** scripts stamp UTC times, and `facts_as_of` is the run's start date.
@@ -274,10 +275,11 @@ A fresh agent planned the tasks from this design and listed where it would have 
 An outside review (8.5/10) found these; each is now part of the design:
 
 1. **ADR 0006 now matches point 2 above:** values are rendered from the facts file, not compared.
-2. **No facts in prose:** `validate.py` rejects digits and licence names (from `data/licences.json`) in `reason`,
-   `why_not` and `risks`. Facts appear only as values rendered from the facts file.
+2. **No facts in prose:** `validate.py` rejects fact-shaped text and licence ids or phrases (from
+   `data/licences.json`) in `reason`, `why_not` and `risks` (narrowed in the second review below). Facts appear only as values rendered from the facts file.
 3. **Technology words are never private:** `data/tech-terms.txt`, built from GitHub's topic names, sits next to
-   `common-words.txt`. "Azure", "PostgreSQL", "React" and "Kubernetes" stay searchable.
+   `common-words.txt`. "Azure", "PostgreSQL", "React" and "Kubernetes" stay searchable, unless the user named
+   them as private (see the second review below).
 4. **The model's own searches:** the skill runs `guard.py check "<query>"` before any web search or page lookup it
    makes itself. This can't be enforced in code, so a transcript eval checks it, as with the 200-call cap.
 5. **No-token mode is REST only** (GraphQL needs a token): basic facts for finalists, the rest "to verify", and a
@@ -292,3 +294,29 @@ An outside review (8.5/10) found these; each is now part of the design:
     `|`, because SOWs often put their requirements in tables.
 11. **Non-interactive runs and the SOW-specific questions:** the up to 2 questions the model adds (not in the bank)
     take the model's recommended option and are listed as assumed, with the question text, in `stack.json`.
+
+## Blueprint second review fixes (2026-11-27)
+
+A second outside review (9/10) found these; each is now part of the design:
+
+1. **ADR tables** in 0002, 0003 and 0004 have one line per row again, so they render on GitHub; option C in ADR 0003
+   comes after B.
+2. **Private beats the allowlist.** Names from the interview and `--private-terms` are checked first and always
+   block, even when they are also in `data/tech-terms.txt` (GitHub topics include company names such as stripe,
+   shopify and salesforce). A test SOW plants a client name that is also a GitHub topic; the eval fails if it appears
+   in any outgoing query or web search.
+3. **Fact-shaped text, not digits.** `validate.py` rejects, in prose fields: counts with a unit or a k/M suffix
+   (`40k`, `1.2M`, `12,000 stars`), percentages, a currency symbol or code next to an amount, and dates (ISO dates,
+   month-and-year, "in 2024"). It allows digits inside a technology word or version (`Python 3`, `OAuth 2.0`,
+   `HTTP/2`, `S3`, `EC2`, `ISO 27001`, `Postgres 16`). Unit tests hold both lists, so a good stack is never rejected
+   for "Python 3".
+4. **Licences by id or phrase.** The licence check matches SPDX ids (`Apache-2.0`, `MIT`, `GPL-3.0-only`) and full
+   phrases (`Apache License`, `MIT License`, `Business Source License`) from `data/licences.json`, never a bare word
+   such as "Apache", so "Apache Kafka" and "Apache Airflow" pass. A bare `MIT` is matched only as a whole word.
+5. **deps.dev confirmed now, not in Build.** A live call on 2026-11-27 returned licence, stars and the Scorecard for
+   `github.com/expressjs/express`, and `:packageversions` mapped it to npm `express` with a verified source link; an
+   unknown repository gives 404, which falls back to manifest names (ADR 0003).
+6. **Bot-only history.** If the last 100 commits on the default branch are all by bots, the project is "only bot
+   activity in the last 100 commits: to verify": not alive, and not silently dead. A planted bot-only project is in
+   the test SOWs (ADR 0002).
+

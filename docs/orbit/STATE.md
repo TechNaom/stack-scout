@@ -9,7 +9,8 @@ Started: 2026-11-27
 
 ## Settings
 
-- Code host: github (public repo TechNaom/stack-scout, to be created after the Ignite gate)
+- Code host: github (public repo TechNaom/stack-scout, **not created yet**: waiting for the owner's choice,
+  now or at Launch; until then the work is in the local git repo only)
 - Work branch: main *(proposed)*
 - Release branch: main
 - Promotion: none
@@ -50,6 +51,11 @@ Started: 2026-11-27
   "recently relicensed".
 
 ## Log
+
+- 2026-11-27 Blueprint second review (9/10) applied: ADR tables one line per row; private terms beat the
+  tech-term allowlist (+ eval); fact-shaped text instead of all digits; licence ids and phrases, not bare words;
+  deps.dev confirmed by a live call; bot-only history is "to verify". Open: price check strict or labelled
+  (owner's choice). Waiting for approval.
 
 - 2026-11-27 Blueprint: ADRs 0001-0007, architecture v1, cold read by a fresh agent (11 questions + unnamed parts) answered in architecture.md; waiting for approval.
 

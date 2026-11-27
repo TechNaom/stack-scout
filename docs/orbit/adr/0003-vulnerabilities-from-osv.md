@@ -12,10 +12,8 @@ name, for example npm `express`), not repositories, so each finalist's package n
 | Option | Fit | Cost | Effort | Lock-in | On failure |
 |---|---|---|---|---|---|
 | A. [OSV.dev `/v1/querybatch`](https://google.github.io/osv.dev/post-v1-querybatch): all finalists in one call, then `/v1/vulns/{id}` only for severity of the ones found | npm, PyPI, Go, Maven, crates.io and more; free; no key *(the no-key and no-limit points come from secondary sources, to confirm in Build)* | Rs 0 | Low | Low (open data) | Down or partial (a `next_page_token`): retry, then "to verify" |
-| C. [deps.dev](https://deps.dev) API: maps a repository to its published packages (handles monorepos and names that
-differ from the repository), returns known advisories and the **OpenSSF Scorecard** (a stronger health signal than
-stars) | Free *(API details to confirm in Build)* | Rs 0 | Low | Low (Google, open data) | Down: fall back to A with manifest names |
 | B. GitHub's advisory database through GraphQL (`securityVulnerabilities`) | Same token as ADR 0002 | Rs 0 | Low | GitHub | Counts against the GraphQL budget |
+| C. [deps.dev](https://deps.dev) API: maps a repository to its published packages (handles monorepos and names that differ from the repository), returns known advisories and the **OpenSSF Scorecard** (a stronger health signal than stars) | Free, no key: **confirmed by a live call on 2026-11-27** (`/v3/projects/github.com%2Fexpressjs%2Fexpress` returned licence, stars and the Scorecard; `:packageversions` mapped it to npm `express` with an SLSA-verified source link; an unknown repository returns 404) | Rs 0 | Low | Low (Google, open data) | Down: fall back to A with manifest names |
 
 ## Decision
 **C for mapping repositories to packages and for the Scorecard, then A for vulnerabilities**, falling back to

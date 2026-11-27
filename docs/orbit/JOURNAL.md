@@ -5,6 +5,7 @@ file says what happened on the way and what it taught. The learn skill reads it.
 
 | When | Kind | What | Commit |
 |---|---|---|---|
+| 2026-11-27 | Fix in review | **Blueprint second review (9/10) applied:** broken ADR tables rejoined; private terms beat the tech-term allowlist; fact-shaped text instead of all digits; licence ids and phrases, not bare words; deps.dev confirmed by a live call; bot-only history rule. Missed by: the first review's fixes (wrapped table rows, over-broad bans). | (this commit) |
 | 2026-11-27 | Fix in review | **Blueprint review (8.5/10) applied:** ADR 0006 made consistent; no facts in prose; tech-term allowlist for the guard; skill-level guard for the model's own searches (transcript eval); REST-only no-token mode; checked model-read prices; non-bot default-branch activity; deps.dev and Scorecard; licence path and renames; docx tables; assumed SOW-specific questions. Missed by: the first draft (one wrong claim: GraphQL without a token). | 90b8511 |
 | 2026-11-27 | Fix in review | **Blueprint cold read:** 11 guesses and 14 unnamed parts found by a fresh agent, answered in architecture.md. Biggest: stdlib-only conflicted with YAML (now JSON); guard enforcement moved into code; the 200-call cap is skill-level, measured by evals. Missed by: the first draft. | ad69f29 |
 | 2026-11-27 | Decision | **Ignite approved by the owner ("yes").** Blueprint next. | b08c661 |
