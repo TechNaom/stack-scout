@@ -1,0 +1,45 @@
+{
+  "type": "array",
+  "items": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+      "id",
+      "ask",
+      "options",
+      "default",
+      "changes",
+      "rank"
+    ],
+    "properties": {
+      "id": {
+        "type": "string",
+        "pattern": "^[a-z_]+$"
+      },
+      "ask": {
+        "type": "string"
+      },
+      "options": {
+        "type": "array",
+        "minItems": 2,
+        "maxItems": 4,
+        "items": {
+          "type": "string"
+        }
+      },
+      "default": {
+        "type": "string"
+      },
+      "changes": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "rank": {
+        "type": "integer",
+        "minimum": 1
+      }
+    }
+  }
+}

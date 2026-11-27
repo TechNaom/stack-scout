@@ -1,0 +1,58 @@
+{
+  "schema": 1,
+  "facts_as_of": "2026-11-27",
+  "partial": false,
+  "unchecked": [],
+  "assumed": [
+    {
+      "id": "hosting",
+      "answer": "serverless"
+    },
+    {
+      "id": "sow_data_region",
+      "answer": "EU",
+      "question": "Where must the data live?"
+    }
+  ],
+  "layers": [
+    {
+      "layer": "api",
+      "choice": "FastAPI",
+      "reason": "Typed Python API with a large community.",
+      "alternative": {
+        "name": "Flask"
+      },
+      "projects": [
+        {
+          "subject": "github:fastapi/fastapi"
+        }
+      ],
+      "services": [
+        {
+          "subject": "price:aws-lambda"
+        }
+      ],
+      "risks": []
+    }
+  ],
+  "capabilities": [
+    {
+      "id": "c1",
+      "name": "Public REST API",
+      "layer": "api",
+      "outcome": "project"
+    }
+  ],
+  "accepted": [],
+  "cost": {
+    "monthly_estimate": 0,
+    "currency": "USD",
+    "parts": [
+      {
+        "subject": "price:aws-lambda",
+        "monthly": 0
+      }
+    ],
+    "unknown_parts": []
+  }
+}
