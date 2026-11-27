@@ -7,7 +7,8 @@
 `questions` and `end` create run.json first when it is missing. Bad arguments,
 a corrupt run.json (except for `start`, which replaces it) or a bad
 STACK_SCOUT_NOW print {"ok": false, "error": "..."} and exit 2.
-This script does not count itself as a script call: it controls the meter.
+run.py itself is not metered (no script call is counted): it controls the meter.
+N must be ASCII digits and at most rules.json's max_questions.
 """
 import sys
 
@@ -17,28 +18,32 @@ USAGE = "usage: run.py start | questions N | end [--partial]"
 
 
 def _count(text):
-    if not text.isdigit() or not text.isascii():
-        raise common.CoreError(f"questions needs a non-negative integer, got {text!r}")
+    cap = common.load_rules()["max_questions"]
+    if not (0 < len(text) <= 4 and text.isascii() and text.isdigit()) or int(text) > cap:
+        raise common.CoreError(f"questions needs a whole number from 0 to {cap}, got {text[:20]!r}")
     return int(text)
 
 
 def _main(argv):
     if argv == ["start"]:
         run = common.new_run()
-        common.save_run(run)
+        with common.locked():
+            common.save_run(run)
         return {"ok": True, "day": run["started"][:10]}
     if len(argv) == 2 and argv[0] == "questions":
         n = _count(argv[1])
-        run = common.load_run() or common.new_run()
-        run["questions_asked"] = n
-        common.save_run(run)
+        with common.locked():
+            run = common.load_run() or common.new_run()
+            run["questions_asked"] = n
+            common.save_run(run)
         return {"ok": True, "questions_asked": n}
     if argv[:1] == ["end"] and argv[1:] in ([], ["--partial"]):
-        run = common.load_run() or common.new_run()
-        run["ended"] = common.now_utc()
-        if argv[1:]:
-            run["partial"] = True
-        common.save_run(run)
+        with common.locked():
+            run = common.load_run() or common.new_run()
+            run["ended"] = common.now_utc()
+            if argv[1:]:
+                run["partial"] = True
+            common.save_run(run)
         return run
     raise common.CoreError(USAGE)
 

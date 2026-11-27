@@ -4,7 +4,14 @@ State lives in state_dir(): run.json (the run meter) and facts-<run day>.json.
 Files that exist but are not valid JSON, or do not pass their schema, raise
 CoreError (a ValueError); a script catches it, prints {"ok": false, "error": ...}
 and exits EXIT_BLOCKED. Nothing here prints or stores the GitHub token.
+
+Every read-merge-write runs under locked(): a `.lock` file next to the target,
+created with O_CREAT|O_EXCL, waited for up to LOCK_WAIT seconds, and removed
+when older than LOCK_STALE seconds. Windows refuses os.replace onto a file
+another process is reading, so reads and replaces retry on PermissionError for
+up to RETRY_FOR seconds before giving up with CoreError.
 """
+import contextlib
 import datetime
 import json
 import os
@@ -13,6 +20,7 @@ import re
 import subprocess
 import sys
 import tempfile
+import time
 
 import schema
 
@@ -22,12 +30,62 @@ EXIT_OK = 0
 EXIT_BLOCKED = 2
 EXIT_RATE_LIMITED = 3
 
-_STAMP = re.compile(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z")
+_STAMP = re.compile(r"[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z")
 _FORMAT = "%Y-%m-%dT%H:%M:%SZ"
+
+LOCK_WAIT = 10.0   # seconds to wait for another process's lock
+LOCK_STALE = 30.0  # a lock older than this was left by a crashed process
+RETRY_FOR = 2.0    # seconds to keep retrying a read or replace on PermissionError
+_PAUSE = 0.05
 
 
 class CoreError(ValueError):
     """Bad state or settings: a script reports it as JSON and exits EXIT_BLOCKED."""
+
+
+def _retry(action, what):
+    """Run action(), retrying PermissionError (Windows sharing clashes) for RETRY_FOR seconds."""
+    for _ in range(int(RETRY_FOR / _PAUSE)):
+        try:
+            return action()
+        except PermissionError:
+            time.sleep(_PAUSE)
+    try:
+        return action()
+    except PermissionError as exc:
+        raise CoreError(f"{what}: still busy after {RETRY_FOR} s: {exc.strerror or exc}") from None
+
+
+@contextlib.contextmanager
+def locked(folder=None):
+    """Hold folder/.lock (default: state_dir()) for one read-merge-write."""
+    folder = pathlib.Path(folder) if folder is not None else state_dir()
+    folder.mkdir(parents=True, exist_ok=True)
+    lock = folder / ".lock"
+    deadline = time.monotonic() + LOCK_WAIT
+    while True:
+        try:
+            fd = os.open(str(lock), os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+            break
+        except (FileExistsError, PermissionError):
+            try:
+                if time.time() - os.path.getmtime(lock) > LOCK_STALE:
+                    os.unlink(lock)
+                    continue
+            except OSError:
+                pass
+            if time.monotonic() >= deadline:
+                raise CoreError(f"could not take the lock {lock.name} in {folder} "
+                                f"within {LOCK_WAIT} s") from None
+            time.sleep(_PAUSE)
+    try:
+        yield
+    finally:
+        os.close(fd)
+        try:
+            _retry(lambda: os.unlink(lock), "removing the lock")
+        except (OSError, CoreError):
+            pass
 
 
 def now_utc() -> str:
@@ -63,8 +121,8 @@ def get_token():
     if os.environ.get("STACK_SCOUT_NO_GH") == "1":
         return None
     try:
-        proc = subprocess.run(["gh", "auth", "token"], capture_output=True, text=True,
-                              encoding="utf-8", errors="replace", timeout=5)
+        proc = subprocess.run(["gh", "auth", "token"], stdin=subprocess.DEVNULL, capture_output=True,
+                              text=True, encoding="utf-8", errors="replace", timeout=5)
     except (OSError, subprocess.SubprocessError, ValueError):
         return None
     out = (proc.stdout or "").strip()
@@ -80,7 +138,7 @@ def _read_json(path, name):
     """Parse path and check it against schema `name`; None when the file is missing."""
     path = pathlib.Path(path)
     try:
-        text = path.read_text(encoding="utf-8-sig")
+        text = _retry(lambda: path.read_text(encoding="utf-8-sig"), f"reading {path.name}")
     except FileNotFoundError:
         return None
     except (OSError, UnicodeDecodeError) as exc:
@@ -106,7 +164,7 @@ def _write_json(path, data, name):
     try:
         with os.fdopen(fd, "w", encoding="utf-8", newline="\n") as handle:
             handle.write(json.dumps(data, ensure_ascii=False, indent=2) + "\n")
-        os.replace(tmp, path)
+        _retry(lambda: os.replace(tmp, path), f"writing {path.name}")
     except BaseException:
         try:
             os.unlink(tmp)
@@ -145,7 +203,14 @@ def facts_path(day=None) -> pathlib.Path:
 
 
 def load_rules() -> dict:
-    return json.loads((ROOT / "data" / "rules.json").read_text(encoding="utf-8"))
+    """data/rules.json; CoreError when it is missing or not a JSON object."""
+    try:
+        rules = json.loads((ROOT / "data" / "rules.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError) as exc:
+        raise CoreError(f"cannot load rules.json: {exc}") from None
+    if not isinstance(rules, dict):
+        raise CoreError("rules.json is not a JSON object")
+    return rules
 
 
 def load_facts(path) -> list:
@@ -157,16 +222,21 @@ def load_facts(path) -> list:
 def add_facts(new: list, path=None) -> None:
     """Merge new facts by (subject, field): later fetched_at wins, a tie goes to the new one."""
     path = facts_path() if path is None else pathlib.Path(path)
-    merged = {(f["subject"], f["field"]): f for f in load_facts(path)}
-    for item in new:
-        if not isinstance(item, dict) or not {"subject", "field", "fetched_at"} <= item.keys():
-            raise CoreError(f"not a fact: {item!r}")
-        key = (item["subject"], item["field"])
-        old = merged.get(key)
-        if old is None or item["fetched_at"] >= old["fetched_at"]:
-            merged[key] = item
-    facts = [merged[k] for k in sorted(merged)]
-    _write_json(path, {"schema": 1, "facts": facts}, "facts")
+    item_schema = schema.load("facts")["properties"]["facts"]["items"]
+    for i, item in enumerate(new):
+        errors = schema.validate(item, item_schema)
+        if errors:  # name the keys only: a bad item's values may hold a secret
+            keys = sorted(map(str, item)) if isinstance(item, dict) else type(item).__name__
+            raise CoreError(f"fact {i} is invalid ({'; '.join(errors[:3])}); its keys: {keys}")
+    with locked(path.parent):
+        merged = {(f["subject"], f["field"]): f for f in load_facts(path)}
+        for item in new:
+            key = (item["subject"], item["field"])
+            old = merged.get(key)
+            if old is None or item["fetched_at"] >= old["fetched_at"]:
+                merged[key] = item
+        facts = [merged[k] for k in sorted(merged)]
+        _write_json(path, {"schema": 1, "facts": facts}, "facts")
 
 
 def fact(subject, field, value, source, by="script", to_verify=None) -> dict:
@@ -186,12 +256,13 @@ def meter(script_calls: int = 1, github_points: int = 0, questions_asked: int = 
     for name, value in counts.items():
         if isinstance(value, bool) or not isinstance(value, int) or value < 0:
             raise CoreError(f"meter: {name} must be a non-negative integer, got {value!r}")
-    run = load_run() or new_run()
-    for name, value in counts.items():
-        run[name] += value
-    if partial is not None:
-        run["partial"] = bool(partial)
-    save_run(run)
+    with locked():
+        run = load_run() or new_run()
+        for name, value in counts.items():
+            run[name] += value
+        if partial is not None:
+            run["partial"] = bool(partial)
+        save_run(run)
 
 
 def emit(obj: dict) -> None:

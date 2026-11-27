@@ -5,9 +5,11 @@ STACK_SCOUT_DIR and turns off `gh` with STACK_SCOUT_NO_GH=1.
 """
 import json
 import os
+import pathlib
 import subprocess
 import sys
 import unittest
+from unittest import mock
 
 from tests import helpers
 import common
@@ -314,6 +316,191 @@ class EmitTest(CoreTest):
         proc = subprocess.run([sys.executable, "-c", code, str(helpers.SKILL / "scripts")],
                               capture_output=True, timeout=60)
         self.assertEqual(proc.stdout.decode("utf-8").strip(), '{"a": "é"}')
+
+
+class ClockStrictTest(CoreTest):
+    def test_non_ascii_and_other_formats_rejected(self):
+        for bad in ("２０２６-11-27T10:00:00Z", "٢026-11-27T10:00:00Z",
+                    "2026-11-27T10:00:00.5Z", "2026-11-27T10:00:00+00:00"):
+            os.environ["STACK_SCOUT_NOW"] = bad
+            with self.assertRaises(common.CoreError, msg=bad):
+                common.now_utc()
+
+
+class GhTokenTest(CoreTest):
+    """The `gh auth token` branch, with subprocess.run mocked: no real gh, no real token."""
+
+    def setUp(self):
+        super().setUp()
+        del os.environ["STACK_SCOUT_NO_GH"]
+
+    def gh(self, result=None, error=None):
+        with mock.patch("common.subprocess.run") as run:
+            if error is not None:
+                run.side_effect = error
+            else:
+                run.return_value = subprocess.CompletedProcess(["gh"], *result)
+            token = common.get_token()
+        return token, run
+
+    def test_success_is_stripped(self):
+        token, run = self.gh((0, "  tok-from-gh \n", ""))
+        self.assertEqual(token, "tok-from-gh")
+        args, kwargs = run.call_args
+        self.assertEqual(args[0], ["gh", "auth", "token"])
+        self.assertIs(kwargs["stdin"], subprocess.DEVNULL)
+        self.assertEqual(kwargs["timeout"], 5)
+
+    def test_failures_give_none(self):
+        self.assertIsNone(self.gh((1, "tok-but-failed\n", "error"))[0])
+        self.assertIsNone(self.gh((0, "  \n", ""))[0])
+        self.assertIsNone(self.gh((0, None, ""))[0])
+        for error in (subprocess.TimeoutExpired(["gh"], 5), FileNotFoundError("gh"), OSError("x")):
+            self.assertIsNone(self.gh(error=error)[0], error)
+
+    def test_env_token_skips_gh(self):
+        os.environ["GITHUB_TOKEN"] = TOKEN
+        with mock.patch("common.subprocess.run") as run:
+            self.assertEqual(common.get_token(), TOKEN)
+        run.assert_not_called()
+
+    def test_no_gh_flag_skips_gh(self):
+        os.environ["STACK_SCOUT_NO_GH"] = "1"
+        with mock.patch("common.subprocess.run") as run:
+            self.assertIsNone(common.get_token())
+        run.assert_not_called()
+
+
+class FactsInputTest(CoreTest):
+    def test_bad_types_are_core_errors(self):
+        path = self.dir / "f.json"
+        for bad in (_fact(fetched_at=5), _fact(subject=["x"]), _fact(field=3), "not a dict",
+                    _fact(by="human"), {"subject": "github:a/b"}):
+            with self.assertRaises(common.CoreError, msg=repr(bad)):
+                common.add_facts([bad], path)
+        self.assertFalse(path.exists())
+
+    def test_error_does_not_echo_values(self):
+        secret = "s3cr3t-value-xyz"
+        with self.assertRaises(common.CoreError) as ctx:
+            common.add_facts([_fact(subject="nope", value=secret, source=secret)], self.dir / "f.json")
+        self.assertNotIn(secret, str(ctx.exception))
+        self.assertIn("subject", str(ctx.exception))
+
+
+class AtomicWriteTest(CoreTest):
+    def test_failed_replace_leaves_old_file_and_no_temp(self):
+        path = self.dir / "f.json"
+        common.add_facts([_fact()], path)
+        before = path.read_bytes()
+        with mock.patch("common.os.replace", side_effect=OSError("disk full")):
+            with self.assertRaises((OSError, common.CoreError)):
+                common.add_facts([_fact(field="archived", value=True)], path)
+        self.assertEqual(path.read_bytes(), before)
+        self.assertEqual(sorted(p.name for p in self.dir.iterdir()), ["f.json"])
+
+    def test_temp_file_is_next_to_target(self):
+        path = self.dir / "sub" / "f.json"
+        real = os.replace
+        seen = []
+
+        def spy(src, dst):
+            seen.append((pathlib.Path(src).parent, pathlib.Path(dst)))
+            return real(src, dst)
+
+        with mock.patch("common.os.replace", side_effect=spy):
+            common.add_facts([_fact()], path)
+        self.assertEqual(seen, [(path.parent, path)])
+
+    def test_replace_retries_on_permission_error(self):
+        path = self.dir / "f.json"
+        real = os.replace
+        calls = []
+
+        def flaky(src, dst):
+            calls.append(1)
+            if len(calls) < 3:
+                raise PermissionError("busy")
+            return real(src, dst)
+
+        with mock.patch("common.os.replace", side_effect=flaky), mock.patch("common.time.sleep"):
+            common.add_facts([_fact()], path)
+        self.assertEqual(len(calls), 3)
+        self.assertEqual(len(common.load_facts(path)), 1)
+
+    def test_replace_gives_up_as_core_error(self):
+        with mock.patch("common.os.replace", side_effect=PermissionError("busy")), \
+                mock.patch("common.time.sleep"):
+            with self.assertRaises(common.CoreError):
+                common.add_facts([_fact()], self.dir / "f.json")
+        self.assertEqual(list(self.dir.iterdir()), [])
+
+    def test_meter_rejects_bool_and_float(self):
+        for kwargs in ({"script_calls": True}, {"github_points": False}, {"questions_asked": 1.0}):
+            with self.assertRaises(common.CoreError, msg=kwargs):
+                common.meter(**kwargs)
+        self.assertFalse((self.dir / "run.json").exists())
+
+
+class LockTest(CoreTest):
+    def test_stale_lock_is_removed(self):
+        lock = self.dir / ".lock"
+        lock.write_text("", encoding="utf-8")
+        old = os.path.getmtime(lock) - 120
+        os.utime(lock, (old, old))
+        common.meter()
+        self.assertFalse(lock.exists())
+        self.assertEqual(self.read_run()["script_calls"], 1)
+
+    def test_fresh_lock_times_out_as_core_error(self):
+        (self.dir / ".lock").write_text("", encoding="utf-8")
+        with mock.patch("common.LOCK_WAIT", 0.2):
+            with self.assertRaisesRegex(common.CoreError, "lock"):
+                common.meter()
+        self.assertTrue((self.dir / ".lock").exists())  # not ours: left alone
+        self.assertFalse((self.dir / "run.json").exists())
+
+    def _workers(self, body, n=4):
+        code = "import sys; sys.path.insert(0, sys.argv[1]); import common\n" + body
+        procs = [subprocess.Popen([sys.executable, "-c", code, str(helpers.SKILL / "scripts"), str(i)],
+                                  env=dict(os.environ), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                 for i in range(n)]
+        for proc in procs:
+            _, err = proc.communicate(timeout=180)
+            self.assertEqual(proc.returncode, 0, err.decode("utf-8", "replace"))
+            self.assertNotIn(b"Traceback", err)
+
+    def test_parallel_meter_loses_nothing(self):
+        self._workers("for _ in range(50):\n    common.meter(github_points=2)\n    common.run_day()\n")
+        run = self.read_run()
+        self.assertEqual((run["script_calls"], run["github_points"]), (200, 400))
+
+    def test_parallel_add_facts_loses_nothing(self):
+        self._workers(
+            "for k in range(25):\n"
+            "    common.add_facts([common.fact(f'github:w{sys.argv[2]}/r{k}', 'stars', k,"
+            " 'https://api.github.com/x')])\n"
+            "    common.load_facts(common.facts_path())\n")
+        self.assertEqual(len(common.load_facts(common.facts_path())), 100)
+
+
+class RulesErrorTest(CoreTest):
+    def test_bad_rules_file_is_core_error(self):
+        for side in (FileNotFoundError("x"), ValueError("bad json")):
+            with mock.patch("common.pathlib.Path.read_text", side_effect=side):
+                with self.assertRaises(common.CoreError):
+                    common.load_rules()
+
+
+class RunArgsTest(CoreTest):
+    def test_odd_counts_block_cleanly(self):
+        self.run_py("start")
+        for arg in ("9" * 5000, "9", "²", "١٢", " 3", "+3", "3.0"):
+            code, out = self.run_py("questions", arg)
+            self.assertEqual(code, 2, arg[:10])
+            self.assertIs(out["ok"], False)
+        self.assertEqual(self.run_py("questions", "8")[0], 0)
+        self.assertEqual(self.read_run()["questions_asked"], 8)
 
 
 if __name__ == "__main__":
