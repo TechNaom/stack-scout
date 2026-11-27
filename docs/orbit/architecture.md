@@ -199,7 +199,7 @@ A fresh agent planned the tasks from this design and listed where it would have 
      Facts are referenced by `subject`, never copied, so `stack.md` is rendered from `stack.json` plus the facts file.
    - **Run:** `{"schema": 1, "started", "ended", "script_calls", "github_points", "questions_asked", "partial"}`.
 2. **What `validate.py` checks:** every `subject` in `stack.json` exists in the facts file. For each project, these
-   fields are present: `exists`, `stars`, `licence`, `pushed_at`, `archived`, `latest_release`, `vulnerabilities`,
+   fields are present: `exists`, `stars`, `licence`, `last_activity` (the last non-bot commit on the default branch, ADR 0002), `archived`, `latest_release`, `vulnerabilities`,
    with `licence_history` for finalists. Values are not compared, because `stack.md` is rendered from the facts
    file, so a number can't drift. Every priced service has a `price:` fact with `source` and `fetched_at`. A price
    the model read from a page is recorded with **`facts.py record-price --service --url --amount --unit`**, which
@@ -230,7 +230,8 @@ A fresh agent planned the tasks from this design and listed where it would have 
 9. **Rules and data files:**
    - `data/licences.json` maps SPDX ids and known phrases to a family (permissive, copyleft, source-available).
      Unknown text is "to verify".
-   - `data/rules.json` holds the constants: dead after 12 months without a push (`pushedAt`), relicence window
+   - `data/rules.json` holds the constants: dead after 12 months without activity (`last_activity`: the last non-bot
+     commit on the default branch, not `pushedAt`), relicence window
      24 months, cap 200 calls, 8 questions.
    - The latest release date is reported separately and isn't used for "dead".
    - `data/pricing-urls.json` lists official pricing pages, `{"<service>": "<url>"}`.
@@ -286,8 +287,10 @@ An outside review (8.5/10) found these; each is now part of the design:
    prompt to run `gh auth login`.
 6. **Model-read prices are checked:** `facts.py record-price` fetches the URL and keeps the price only if the amount
    appears in the page text. Otherwise the price is "to verify". Pages that draw prices with JavaScript therefore
-   come out as "to verify", which is honest.
-7. **Last activity** is the last commit by a non-bot author on the default branch, not `pushedAt` (ADR 0002).
+   come out as "to verify", which is honest. **This strict version is the current design;** the owner may
+   instead choose the labelled version (the model-read price shown as "read by the model, not confirmed by script").
+7. **Last activity** is the last commit by a non-bot author on the default branch, not `pushedAt` (ADR 0002). The
+   PRD's "last push" (R5) and "no activity" (R6) both mean this `last_activity` fact.
 8. **Repository to package** uses deps.dev, which also gives the OpenSSF Scorecard (ADR 0003).
 9. **The licence file** is found through `/repos/{owner}/{repo}/license`, and renames are followed (ADR 0004).
 10. **`sow.py` reads tables** (`w:tbl`) in `.docx` files as well as paragraphs, row by row, with cells separated by

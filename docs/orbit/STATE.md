@@ -54,8 +54,8 @@ Started: 2026-11-27
 
 - 2026-11-27 Blueprint second review (9/10) applied: ADR tables one line per row; private terms beat the
   tech-term allowlist (+ eval); fact-shaped text instead of all digits; licence ids and phrases, not bare words;
-  deps.dev confirmed by a live call; bot-only history is "to verify". Open: price check strict or labelled
-  (owner's choice). Waiting for approval.
+  deps.dev confirmed by a live call; bot-only history is "to verify". Price check: the design uses the strict version
+  (architecture fix 6); the owner may switch it to the labelled version before approval. Waiting for approval.
 
 - 2026-11-27 Blueprint: ADRs 0001-0007, architecture v1, cold read by a fresh agent (11 questions + unnamed parts) answered in architecture.md; waiting for approval.
 
