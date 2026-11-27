@@ -219,6 +219,25 @@ class ValidateTest(unittest.TestCase):
         good["started"] = "٢٠٢٦-01-01T00:00:00Z"
         self.assertEqual(len(schema.validate(good, run)), 1)
 
+    def test_unicode_space_is_whitespace(self):
+        facts = schema.load("facts")
+        for space in (" ", " ", "　"):
+            with self.subTest(space=hex(ord(space))):
+                good = _read(FIXTURES / "facts.good.json")
+                good["facts"][0]["subject"] = f"github:foo{space}bar/baz"
+                errors = schema.validate(good, facts)
+                self.assertEqual(len(errors), 1, errors)
+                self.assertTrue(errors[0].startswith("$.facts[0].subject:"), errors)
+
+    def test_digit_and_word_classes_are_ascii(self):
+        self.assertTrue(schema.validate("٢", {"pattern": r"^\d$"}))
+        self.assertTrue(schema.validate("٢", {"pattern": r"^[\d]$"}))
+        self.assertEqual(schema.validate("7", {"pattern": r"^[\dx]$"}), [])
+        self.assertTrue(schema.validate("é", {"pattern": r"^\w$"}))
+        self.assertTrue(schema.validate("é", {"pattern": r"^[\w-]$"}))
+        self.assertEqual(schema.validate("a_9", {"pattern": r"^\w+$"}), [])
+        self.assertEqual(schema.validate("\\d", {"pattern": r"^\\d$"}), [])
+
     def test_enum_does_not_confuse_true_and_one(self):
         self.assertTrue(schema.validate(True, {"enum": [1]}))
         self.assertEqual(schema.validate(1, {"enum": [1]}), [])
@@ -309,6 +328,13 @@ class CliTest(unittest.TestCase):
         text = (FIXTURES / "stack.good.json").read_text(encoding="utf-8")
         text = text.replace('"monthly_estimate": 0', '"monthly_estimate": 1e400')
         self._invalid("stack", self._write(text))
+
+    def test_cli_non_finite_in_untyped_slot_rejected(self):
+        text = (FIXTURES / "facts.good.json").read_text(encoding="utf-8")
+        self.assertIn('"value": 80000', text)
+        for literal in ("NaN", "Infinity", "-Infinity", "1e400", "-1e400"):
+            with self.subTest(literal=literal):
+                self._invalid("facts", self._write(text.replace('"value": 80000', f'"value": {literal}')))
 
     def test_cli_deep_nesting(self):
         self._invalid("answers", self._write("[" * 100000 + "]" * 100000))

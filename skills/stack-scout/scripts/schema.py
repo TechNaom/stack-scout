@@ -9,7 +9,7 @@ any instance is looked at.
 
 Strict on purpose: bools are not numbers, 1.0 is not an integer, NaN and
 infinities are not numbers, and enum compares numbers by exact type.
-Patterns follow JSON Schema (ECMA) meaning: re.search, ASCII \\d \\w \\s, and
+Patterns follow JSON Schema (ECMA) meaning: re.search, ASCII \\d and \\w, Unicode \\s, and
 an unescaped `$` matches only at the very end (not before a trailing "\\n").
 
 Usage: python schema.py <name> <file>
@@ -61,14 +61,24 @@ def load(name):
     return json.loads(path.read_text(encoding="utf-8"))
 
 
+_ASCII_CLASSES = {"d": "0-9", "w": "A-Za-z0-9_"}
+
+
 def _ecma(pattern):
-    """Turn every unescaped `$` outside a character class into `\\Z`."""
+    """Give a pattern its JSON Schema (ECMA) meaning under Python's re.
+
+    An unescaped `$` outside a character class becomes `\\Z`, and `\\d` and
+    `\\w` become their ASCII sets; `\\s` stays Unicode, as in ECMA.
+    """
     out = []
     escaped = in_class = False
     for ch in pattern:
         if escaped:
-            out.append(ch)
             escaped = False
+            if ch in _ASCII_CLASSES:
+                out[-1] = _ASCII_CLASSES[ch] if in_class else f"[{_ASCII_CLASSES[ch]}]"
+            else:
+                out.append(ch)
         elif ch == "\\":
             out.append(ch)
             escaped = True
@@ -88,7 +98,7 @@ def _ecma(pattern):
 
 def _compile(pattern):
     if pattern not in _PATTERNS:
-        _PATTERNS[pattern] = re.compile(_ecma(pattern), re.ASCII)
+        _PATTERNS[pattern] = re.compile(_ecma(pattern))
     return _PATTERNS[pattern]
 
 
@@ -212,6 +222,13 @@ class _Invalid(Exception):
     """A problem with the input file, reported as one '$: ...' error."""
 
 
+def _finite_float(text):
+    value = float(text)
+    if not math.isfinite(value):
+        raise _Invalid(f"$: {text} is out of range for a JSON number")
+    return value
+
+
 def _no_constant(name):
     raise _Invalid(f"$: {name} is not valid JSON")
 
@@ -233,7 +250,12 @@ def _read(file):
     except UnicodeDecodeError as exc:
         raise _Invalid(f"$: {file} is not UTF-8: {exc}") from None
     try:
-        return json.loads(text, parse_constant=_no_constant, object_pairs_hook=_no_duplicates)
+        return json.loads(
+            text,
+            parse_constant=_no_constant,
+            parse_float=_finite_float,
+            object_pairs_hook=_no_duplicates,
+        )
     except ValueError as exc:
         raise _Invalid(f"$: {file} is not JSON: {exc}") from None
 
