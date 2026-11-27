@@ -30,6 +30,15 @@ Product-wide conventions (every card follows them):
   `python -m unittest tests.test_x -v` run from the repository root. `tests/check.py` is a plain script and
   does not import `helpers`. Tests never touch the network: every HTTP call goes to the mock server from T5,
   through the base-URL variables in `skills/stack-scout/scripts/common.py`.
+- **Python on users' machines:** the skill and the installers use the first of `python3`, `python` for which
+  `-c "import sys; sys.exit(sys.version_info < (3, 10))"` succeeds (on Windows `python3` may be the Store stub,
+  which fails this test). The installers stop with "Stack Scout needs Python 3.10 or newer" if neither passes.
+  Commands on the cards say `python`, which is right for the builder's machine and CI.
+- **UTF-8 everywhere:** every file is read and written with `encoding="utf-8"`, and every script's `main()`
+  starts with `common.utf8_stdout()` (`sys.stdout.reconfigure(encoding="utf-8")`), so a "₹" or a CJK name never
+  raises `UnicodeEncodeError` on Windows when output is piped.
+- A **script call** is one run of one script (`meter(script_calls=1)` once in each `main()`), whatever number of
+  HTTP requests it makes; GitHub points come from GraphQL's `rateLimit.cost`.
 - Every script prints one JSON object on stdout. Exit codes: 0 ok, 2 blocked or invalid, 3 rate-limited
   (partial results saved first). A script never prints a token.
 - One task per branch `t<N>-<slug>`, one pull request into `main`, commits as Manohar Papasani with the noreply
@@ -42,7 +51,7 @@ Product-wide conventions (every card follows them):
 | T1 | Repository basics, licence and CI on 3 platforms | N5, N7 | `tests/test_repo.py`: CI file has the 3-OS matrix and runs both suites | CI green on Linux, Windows and macOS for the pull request | - | S | |
 | T2 | Hand-written schemas and the schema checker | R12, N2 | `tests/test_schema.py`: good and bad examples for all 6 schemas | `python -m unittest tests.test_schema -v` OK | T1 | M | |
 | T3 | First 5 labelled test SOWs | R2, N2, N3 | `tests/test_fixtures.py`: every SOW has a label entry that passes `labels.schema.json` | the fixture test is OK | T2 | M | |
-| T4 | Shared core: clock, token, redaction, facts file, run meter | N1, N6, R9 | `tests/test_common.py` | the common test is OK | T1 | M | |
+| T4 | Shared core: clock, token, redaction, facts file, run meter, `run.py` | N1, N6, R9 | `tests/test_common.py` | the common test is OK | T2 | M | |
 | T5 | HTTP client with back-off, and the mock API server | N6 | `tests/test_http.py` against `tests/mock_api.py` (200, 403, 429, Retry-After, 3 retries) | the http test is OK | T4 | M | |
 | T6 | `guard.py` and its word lists | N3 | `tests/test_guard.py` incl. a private name that is also a tech term | the guard test is OK | T4 | M | |
 | T7 | `facts.py verify`: batched GraphQL, REST-only mode, bot rule | R5, R6, N6 | `tests/test_facts_verify.py` against the mock server | the facts test is OK | T5, T6 | M | |
@@ -167,7 +176,7 @@ Serves: N5, N7. Depends on: none. Size: S. Issue: <#>
    `https://github.com/TechNaom/stack-scout`, license `MIT`), `marketplace.json` (copy the shape of
    `idea-to-orbit/.claude-plugin/marketplace.json`, owner "TechNaom AI R&D Labs"), `LICENSE`, `README.md`,
    `.gitignore` (`.env`, `.env.*`, `!.env.example`, `__pycache__/`, `.stack-scout/`, `evals/results/`, `.DS_Store`)
-   and `.gitattributes` (`*.sh text eol=lf`, `*.py text eol=lf`). The licence is MIT only after the owner
+   and `.gitattributes` (`* text=auto eol=lf`, so golden `.md` and `.json` files keep LF on Windows runners too). The licence is MIT only after the owner
    confirms it at the Assemble gate; if they choose another, use that.
 4. Write `tests/check.py` with the T1 checks. Run `python tests/check.py`. Expect: `ok: 7 checks`.
 5. Run the full suite: `python -m unittest discover -s tests -t . -v && python tests/check.py`. Expect: `OK`, then
@@ -228,7 +237,8 @@ Serves: R12, N2. Depends on: T1. Size: M. Issue: <#>
 - `labels`: a list of `{"id", "file", "format" (enum md, txt, docx, pdf), "open_points" (list of question ids),
   "capabilities_min" (integer), "planted": {"client_name", "client_name_is_topic", "mismatch", "fake",
   "archived", "dead", "bot_only", "relicensed", "vulnerable"}}`; every `planted` key optional; the lists hold
-  `owner/repo` strings; `client_name` a string; `mismatch` a string describing it.
+  `owner/repo` strings; `client_name` a string; `client_name_is_topic` a boolean (true when the client name is also a GitHub topic in
+  `data/tech-terms.txt`); `mismatch` a string describing it.
 
 **Steps**
 1. Write `tests/test_schema.py`: for each of the 6 schemas, the `.good.json` example gives no errors and each
@@ -280,11 +290,11 @@ bot-only, relicensed, vulnerable) come in T25-T26, after the scripts that check 
 
 ### T4 Shared core: clock, token, redaction, facts file, run meter
 
-Serves: N1, N6, R9. Depends on: T1. Size: M. Issue: <#>
+Serves: N1, N6, R9. Depends on: T2 (the facts and run schemas). Size: M. Issue: <#>
 
 **Files**
-- Create: `skills/stack-scout/scripts/common.py`, `skills/stack-scout/data/rules.json`. Test:
-  `tests/test_common.py`.
+- Create: `skills/stack-scout/scripts/common.py`, `skills/stack-scout/scripts/run.py`,
+  `skills/stack-scout/data/rules.json`. Test: `tests/test_common.py`.
 
 **Tests that read these files:** none yet. Every later script imports it.
 
@@ -315,7 +325,16 @@ Serves: N1, N6, R9. Depends on: T1. Size: M. Issue: <#>
 - `meter(script_calls: int = 1, github_points: int = 0, questions_asked: int = 0, partial: bool | None = None)`:
   creates `state_dir()/"run.json"` with `started = now_utc()` on first use, adds the counts, sets `partial` when
   given.
-- `emit(obj: dict) -> None`: `print(json.dumps(obj, ensure_ascii=False))`.
+- `emit(obj: dict) -> None`: `print(json.dumps(obj, ensure_ascii=False))`; `utf8_stdout() -> None` as in the
+  conventions.
+- **`scripts/run.py`, the run's start and end** (the skill calls it; nothing else resets `run.json`):
+  - `python skills/stack-scout/scripts/run.py start`: replaces `run.json` with `{"schema": 1, "started":
+    now_utc(), "ended": null, "script_calls": 0, "github_points": 0, "questions_asked": 0, "partial": false}`,
+    so a run a week later gets its own date, facts file and counts. Prints `{"ok": true, "day": "<run day>"}`.
+  - `run.py questions N`: sets `questions_asked` to N.
+  - `run.py end [--partial]`: sets `ended = now_utc()` (and `partial`). Prints the whole `run.json`.
+  - `meter()` without a `run.json` creates one as `start` would (scripts run by hand still work).
+  - `run.json` passes `run.schema.json` after every one of these.
 
 **Steps**
 1. Write `tests/test_common.py` (each test sets `STACK_SCOUT_DIR` to `helpers.tmpdir()`, `STACK_SCOUT_NOW`,
@@ -323,7 +342,8 @@ Serves: N1, N6, R9. Depends on: T1. Size: M. Issue: <#>
    value and the new one on a tie; the file passes `facts.schema.json`; `fact(..., to_verify="x")` has value
    None; `meter` twice gives `script_calls == 2` and one `started`; with `run.json` started on 2026-11-27T23:59:00Z and
    the clock moved to 2026-11-28T00:01:00Z, `facts_path()` still ends in `facts-2026-11-27.json`; `load_rules()`
-   has the 9 keys. Run
+   has the 7 keys; `run.py start`, `questions 3`, `end` leave a `run.json` that passes `run.schema.json`
+   with `ended` set and `questions_asked == 3`; a second `start` resets the counts and the day. Run
    `python -m unittest tests.test_common -v`. Expect: `ModuleNotFoundError: No module named 'common'`.
 2. Write `skills/stack-scout/scripts/common.py`. Run again. Expect: `OK`.
 3. Full suite, commit `T4: shared core`.
@@ -351,8 +371,9 @@ Serves: N6. Depends on: T4. Size: M. Issue: <#>
   -> tuple[int, dict | list | None]`: `urllib.request`, 30 s timeout, `User-Agent: stack-scout`,
   `Authorization: Bearer <token>` when given, JSON body and response. 200-299 and 404 return
   `(status, parsed or None)`. 403 with `x-ratelimit-remaining: 0`, and any 429, wait (the `Retry-After` header,
-  else until `x-ratelimit-reset`, at most 60 s, else 2, 4, 8 s) and retry up to `retries` times, then raise
-  `RateLimited`. Other errors raise `RuntimeError(redact(message, token))`. `$STACK_SCOUT_NO_SLEEP=1` turns the
+  else until `x-ratelimit-reset`, else 2, 4, 8 s) and retry up to `retries` times, then raise `RateLimited`.
+  **If the wait would be longer than 60 s, raise `RateLimited` at once** without waiting (an hour-long limit is
+  not worth minutes of the user's time; the run ends partial). Other errors raise `RuntimeError(redact(message, token))`. `$STACK_SCOUT_NO_SLEEP=1` turns the
   waits into no-ops (tests).
 - `tests/mock_api.py`: `class MockAPI` (context manager) starts `http.server.ThreadingHTTPServer` on port 0 in a
   thread; `.url` is its base URL; `.route(method, path, responses)` queues a list of
@@ -363,7 +384,7 @@ Serves: N6. Depends on: T4. Size: M. Issue: <#>
 
 **Steps**
 1. Write `tests/test_http.py`: 200 returns the body; 404 returns `(404, ...)`; one 429 then 200 succeeds after
-   one retry; four 403s with `x-ratelimit-remaining: 0` raise `RateLimited` after exactly 4 requests; the token
+   one retry; a 429 with `Retry-After: 3600` raises `RateLimited` after exactly 1 request; four 403s with `x-ratelimit-remaining: 0` raise `RateLimited` after exactly 4 requests; the token
    is sent in the header and never appears in a `RuntimeError` from a 500. Run
    `python -m unittest tests.test_http -v`. Expect: `ImportError` for `mock_api`.
 2. Write `tests/mock_api.py`. Run again. Expect: failures, `http_json` missing.
@@ -490,7 +511,8 @@ Serves: R5, R6, N6. Depends on: T5, T6. Size: M. Issue: <#>
    - `NOASSERTION` gives value null with `to_verify`.
    - no token (`GITHUB_TOKEN=""`, `STACK_SCOUT_NO_GH=1`): REST requests only, `"mode": "rest"`,
      `latest_release` has `to_verify`.
-   - 429 on every request: exit 3, `"partial": true`, the facts from before the limit kept.
+   - 21 repositories, the first GraphQL request 200 and the second 429 on every retry: exit 3,
+     `"partial": true`, the first 20 repositories' facts kept and the 21st in `unchecked`.
    - HTTP 200 with `{"errors": [{"type": "RATE_LIMITED"}]}`: exit 3 as well.
    - `to-verify price:x price "not checked" --source https://example.com/pricing` writes a null fact with
      `to_verify`; a `http://` source exits 2.
@@ -534,7 +556,11 @@ Serves: N2, R9, R10. Depends on: T2, T4. Size: M. Issue: <#>
   order: schema errors (stop here if any); every `subject` in `layers[].projects`, `layers[].services`,
   `accepted` and `cost.parts` is in the facts; every `github:` project has a fact for each field in
   `rules["required_fields"]` (a fact with `to_verify` counts as present); `prose_errors` on every `reason`,
-  `alternative.why_not` and `risks` item, reported as `$.layers[0].reason: fact-shaped text "40k"`; every
+  `alternative.why_not`, `risks` item, `choice`, `alternative.name`, `capabilities[].name` and
+  `accepted[].what`, reported as `$.layers[0].reason: fact-shaped text "40k"`; **no private term** (from
+  `state_dir()/"terms.json"`, when it exists) in any string anywhere in `stack.json`, reported as
+  `$.<path>: private term` without repeating the term (extracted terms are reported under `"warnings"`, not
+  errors, because they may be false positives); every
   capability's `layer` names an existing layer; outcome `project` needs that layer's `projects` non-empty, and
   outcome `service` needs its `services` non-empty (each `price:` subject in the facts, a `to_verify` fact being
   enough in M1: real prices come in T19); `build-yourself` needs nothing.
@@ -554,6 +580,8 @@ Serves: N2, R9, R10. Depends on: T2, T4. Size: M. Issue: <#>
      `price:` subject backed only by a `to_verify` fact passes; a capability naming an unknown layer fails;
    - a stack whose project is missing from the facts fails with that subject named; one missing
      `latest_release` fails; one whose `latest_release` fact has `to_verify` passes; a schema error stops early.
+   - with a `terms.json` holding private `Halvorsen`, a `reason` "fits Halvorsen's team" fails and the message
+     does not contain "Halvorsen"; an extracted-only term gives a warning and exit 0.
    - CLI exit codes 0 and 2.
    Run `python -m unittest tests.test_validate -v`. Expect: `ModuleNotFoundError: No module named 'validate'`.
 2. Write `skills/stack-scout/data/licences.json` and `skills/stack-scout/scripts/validate.py`. Run again. Expect: `OK`.
@@ -637,9 +665,11 @@ Serves: R2, R3, R4, R12, R14. Depends on: T2, T6, T7, T8, T9. Size: M. Issue: <#
   work, a problem statement or a project brief, and the user wants a tech stack"). The body, in this order:
   1. **Where the scripts are:** `SS` is this skill's own folder, the "Base directory for this skill" Claude Code
      shows when the skill loads, written with forward slashes; every script call is
-     `python "$SS/scripts/<name>.py" ...`. Run every script with the user's project folder as the working
+     `$PY "$SS/scripts/<name>.py" ...`. Run every script with the user's project folder as the working
      directory, so `.stack-scout/` lands there.
-  2. **Read the SOW** (M1: `.md` and `.txt` with the Read tool; other formats arrive in T13).
+  2. **Start the run:** pick `PY` as in the conventions (first of `python3`, `python` that is 3.10+), then
+     `$PY "$SS/scripts/run.py" start`. **Read the SOW** (M1: `.md` and `.txt` with the Read tool; other formats
+     arrive in T13).
   3. `guard.py terms --sow <file> [--private-terms F] [--answers F]`, again after the interview.
   4. **Open points:** for each bank question, decide whether the SOW already answers it; ask only the open
      ones, in rank order, at most 4 per question screen and 8 in all. On screen the **default is always the
@@ -662,14 +692,15 @@ Serves: R2, R3, R4, R12, R14. Depends on: T2, T6, T7, T8, T9. Size: M. Issue: <#
      fact-shaped text and no licence names.
   9. `validate.py stack.json`; on errors fix the named field and validate again, at most 3 times, then mark the
      item unchecked. Never write `stack.md` by hand: `render.py stack.json`.
-  10. **Report:** the path to `stack.md`, the to-verify list, and the suggestion to add `.stack-scout/` to
+  10. **End the run:** `run.py questions <n asked>` after the interview, `run.py end` (with `--partial` when the
+      stack is partial) after rendering. **Report:** the path to `stack.md`, the to-verify list, and the suggestion to add `.stack-scout/` to
       `.gitignore`.
   11. **Never:** state a fact not in the facts file; send a search not passed by `guard.py`; go past about 200
       tool calls (stop with a partial, validated result).
 - New checks in `tests/check.py` (each a numbered check, so the `ok:` count grows): the skill frontmatter has `name` and `description`; the body mentions
   `guard.py terms`, `guard.py check`, `facts.py verify`, `validate.py` and `render.py`; the command file has
-  `description` and `argument-hint`; `questions.json` passes its schema and every default is an option; every
-  `python "$SS/scripts/X.py"` the skill names exists in `skills/stack-scout/scripts/`.
+  `description` and `argument-hint`; `questions.json` passes its schema and every default is an option; every `$PY "$SS/scripts/X.py"` the skill names exists in `skills/stack-scout/scripts/`; the skill
+  never puts a bare `python ` or `python3 ` before `"$SS` (it uses `$PY`).
 
 **Steps**
 1. Add the checks to `tests/check.py`. Run `python tests/check.py`. Expect: `FAIL:` lines for the missing skill,
@@ -705,7 +736,16 @@ Serves: R11. Depends on: T10. Size: M. Issue: <#>
   hook and no settings.json change**. Install copies `skills/stack-scout/` (with its `scripts/`, `data/`,
   `schema/`, `templates/` and `questions.json`, without `__pycache__/`) to `<config>/skills/stack-scout/`
   (marker file `.stack-scout` inside) and `commands/stack-scout.md` to `<config>/commands/stack-scout.md`.
-  Nothing else. It stops before changing anything if a
+  Nothing else.
+- **Command ownership:** the marker file holds `command-sha256: <hash>` of the command file the installer
+  wrote. Install writes the command when it is missing, or when its current hash equals the marker's (ours, from
+  an earlier install); otherwise it stops before changing anything ("<path> exists and is not ours"). Uninstall
+  removes the command only when its hash equals the marker's, and says so when it leaves one in place. Hashes use
+  `sha256sum`, else `shasum -a 256` (macOS), in `install.sh`, and `Get-FileHash` in `install.ps1`.
+- Both installers check for Python 3.10 or newer first (see the conventions) and stop if it is missing.
+- New checks in `tests/check.py`: both installers exist; `install.sh` starts with `#!/usr/bin/env bash` and has
+  `set -euo pipefail`; both handle `--uninstall`; both write the marker `.stack-scout`; `install.sh` is
+  executable in git (`git ls-files -s install.sh` shows mode `100755`). It stops before changing anything if a
   `<config>/skills/stack-scout/` without the marker exists (someone else's). Uninstall removes exactly those.
   Both print one line per action and end with `Installed Stack Scout <version>` or `Removed Stack Scout`.
 - PowerShell 5.1 reads `--uninstall` from `$args` (it does not bind to a named parameter).
@@ -717,13 +757,15 @@ Serves: R11. Depends on: T10. Size: M. Issue: <#>
    `System32/bash.exe`; also `powershell -NoProfile -ExecutionPolicy Bypass -File install.ps1` on Windows), check
    every file is in place, that `python <config>/skills/stack-scout/scripts/schema.py questions
    <config>/skills/stack-scout/questions.json` exits 0, and that `python
-   <config>/skills/stack-scout/scripts/render.py` on T9's golden fixtures writes the expected file (the copied
-   scripts find their data and template); run again (rerun is
+   <config>/skills/stack-scout/scripts/render.py` on T9's golden fixtures with `--out <temp folder>/stack.md`
+   writes the expected file (the copied scripts find their data and template); run again (rerun is
    safe); `--uninstall` leaves the temp folder with no Stack Scout files; a foreign `skills/stack-scout/` without
-   the marker makes install exit 1 and change nothing. Run `python -m unittest tests.test_install -v`. Expect:
+   the marker makes install exit 1 and change nothing; a foreign `commands/stack-scout.md` (different hash) makes
+   install exit 1 and change nothing, and after a normal install, editing the command by hand makes uninstall
+   leave it in place. Run `python -m unittest tests.test_install -v`. Expect:
    failures, installer not found.
-2. Write `install.sh`, then `install.ps1`. Run `git update-index --chmod=+x install.sh` so `./install.sh`
-   runs on macOS and Linux. Run the test again. Expect: `OK` (on Windows both installers ran).
+2. Write `install.sh`, then `install.ps1`. Run `git add --chmod=+x install.sh` (the file is new, so
+   `git update-index` would fail) so `./install.sh` runs on macOS and Linux. Run the test again. Expect: `OK` (on Windows both installers ran).
 3. Full suite, commit `T11: installers`, push, open the pull request.
 
 **Done check:** `gh pr checks`. Expect: all 6 matrix jobs `pass`, including `test_install` on Windows and macOS.
@@ -755,15 +797,21 @@ Serves: R1, R5, R7. Depends on: T11, T3. Size: S. Issue: <#>
 **Steps**
 1. Write `tests/smoke_live.py`. Run `python tests/smoke_live.py`. Expect: `ok` and a points count (fix the
    scripts, not the smoke, if a real API answer differs from the mock: add that shape to the mock tests first).
-2. Install with `bash install.sh`. A **fresh agent** that has not seen this work reads
-   `<config>/skills/stack-scout/SKILL.md` and follows it on `tests/fixtures/sows/01-memo-generator.md` with
-   `--defaults`, in a temp folder.
+2. **Script install into a temp config** (`CLAUDE_CONFIG_DIR=<temp>/claude bash install.sh`), never the
+   owner's real `~/.claude`. A **fresh subagent** that has not seen this work is told "Base directory for this
+   skill: `<temp>/claude/skills/stack-scout`" (the line Claude Code would show), reads that `SKILL.md`, and
+   follows it on `tests/fixtures/sows/01-memo-generator.md` with `--defaults`, in a temp working folder. This
+   proves the skill's steps and scripts; it does not prove Claude Code shows the base directory, which step 4
+   does.
 3. Check the run: `python <config>/skills/stack-scout/scripts/validate.py stack.json` exits 0; `stack.md` exists, has
    every heading of the template, and every number in its projects tables is a link.
-4. **One plugin install too:** in Claude Code, `/plugin marketplace add <repo path>` then
-   `/plugin install stack-scout@stack-scout`, and confirm the skill finds `SS` from its base directory (one
-   `guard.py terms` call is enough). Where `/plugin` is not available (the VS Code extension has had no
-   `/plugin`), record that in `JOURNAL.md` and move this check to T36; do not skip it silently.
+4. **One real Claude Code session (the owner's one step in M1):** in a new terminal session, `/plugin
+   marketplace add <repo path>` then `/plugin install stack-scout@stack-scout`, then `/stack-scout
+   tests/fixtures/sows/01-memo-generator.md --defaults` in a temp folder. Confirm the session showed the skill's
+   base directory and the run ended with `validate.py` ok. No script install is present in the real `~/.claude`,
+   so there is one `/stack-scout`. Afterwards `/plugin uninstall stack-scout`. Where `/plugin` is not available
+   (the VS Code extension has had none), record that in `JOURNAL.md` and move this check to T36; never skip it
+   silently.
 5. Write the result (points used, tool calls, time, anything the agent had to guess) in `JOURNAL.md`; each
    guess becomes a fix to `SKILL.md` with its check in `tests/check.py`.
 6. Commit `T12: walking skeleton end to end`.

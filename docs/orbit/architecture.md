@@ -342,3 +342,15 @@ A fresh agent read the M1 task cards; these answers are now on the cards in [tas
    listed as a risk and under "To verify".
 8. **The private-names answer** never appears in `stack.json` or `stack.md`, and option labels are never terms.
 
+**Second cold read (2026-11-27), also on the cards:**
+
+9. **`run.py start | questions | end`** begins and ends every run, so a later run gets its own date, facts file
+   and counts. A script call is one run of one script.
+10. **Python lookup:** `python3`, then `python`, whichever is 3.10 or newer; the installers stop without one.
+11. **The command file's ownership** is a hash in the skill's marker file; install and uninstall never touch a
+    `commands/stack-scout.md` that is not ours.
+12. **Rate limits longer than 60 s** end the run partial at once instead of waiting.
+13. **`validate.py` also blocks private terms anywhere in `stack.json`** and checks more prose fields (`choice`,
+    names, `accepted`); extracted terms are warnings.
+14. **UTF-8 and LF everywhere:** `* text=auto eol=lf`, UTF-8 file reads and stdout.
+

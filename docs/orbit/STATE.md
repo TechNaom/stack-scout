@@ -5,7 +5,7 @@ Started: 2026-11-27
 ## Current
 
 - Stage: assemble
-- Status: in progress   <!-- in progress | waiting for approval | approved | needs review -->
+- Status: waiting for approval   <!-- in progress | waiting for approval | approved | needs review -->
 
 ## Settings
 
@@ -25,7 +25,7 @@ Started: 2026-11-27
 |---|---|---|---|
 | ignite | approved | owner ("yes") | 2026-11-27 |
 | blueprint | approved | owner ("yes proceed") | 2026-11-27 |
-| assemble | in progress | | |
+| assemble | waiting for approval | | |
 | build | not started | | |
 | test-flight | not started | | |
 | launch | not started | | |
@@ -50,6 +50,10 @@ Started: 2026-11-27
   "recently relicensed".
 
 ## Log
+
+- 2026-11-27 Assemble: tasks.md (4 milestones, 37 tasks, cards for M1's 12); two cold reads by fresh agents (12 + 11
+  questions) answered on the cards and in architecture.md; Fast tests and Full suite fixed at T1. Waiting for
+  approval, and for the owner's licence choice (MIT proposed).
 
 - 2026-11-27 Blueprint approved by the owner ("yes proceed"); price check stays strict (current design). Public repo
   created and pushed on the owner's go-ahead. Assemble started.
