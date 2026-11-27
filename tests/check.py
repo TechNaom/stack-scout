@@ -10,14 +10,24 @@ NAME = "stack-scout"
 
 
 def _load(path, failures):
+    """Parse a JSON object file; record a failure and return {} if it cannot."""
     try:
-        return json.loads(path.read_text(encoding="utf-8"))
+        data = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, ValueError) as exc:
         failures.append(f"{path.name} does not parse: {exc}")
-        return None
+        return {}
+    if not isinstance(data, dict):
+        failures.append(f"{path.name} is not a JSON object")
+        return {}
+    return data
+
+
+def _dict(value):
+    return value if isinstance(value, dict) else {}
 
 
 def main() -> int:
+    sys.stdout.reconfigure(encoding="utf-8")
     failures = []
     count = 0
 
@@ -25,10 +35,13 @@ def main() -> int:
     plugin = _load(PLUGIN, failures)
     count += 1
     market = _load(MARKET, failures)
-    plugin = plugin if isinstance(plugin, dict) else {}
-    market = market if isinstance(market, dict) else {}
-    plugins = market.get("plugins") or [{}]
-    first = plugins[0] if isinstance(plugins[0], dict) else {}
+
+    plugins = market.get("plugins")
+    if isinstance(plugins, list) and plugins:
+        first = _dict(plugins[0])
+    else:
+        first = {}
+    metadata = _dict(market.get("metadata"))
 
     count += 1
     if plugin.get("name") != NAME:
@@ -39,14 +52,11 @@ def main() -> int:
         failures.append(f"marketplace.json plugins[0].name is {first.get('name')!r}, expected {NAME!r}")
 
     count += 1
-    versions = (
-        plugin.get("version"),
-        (market.get("metadata") or {}).get("version"),
-        first.get("version"),
-    )
-    if len(set(versions)) != 1 or versions[0] is None:
+    versions = (plugin.get("version"), metadata.get("version"), first.get("version"))
+    if not (isinstance(versions[0], str) and versions[0] and all(v == versions[0] for v in versions)):
         failures.append(
-            "versions differ: plugin.json %r, marketplace metadata %r, plugins[0] %r" % versions
+            "versions must be equal strings: plugin.json %r, marketplace metadata %r, plugins[0] %r"
+            % versions
         )
 
     count += 1

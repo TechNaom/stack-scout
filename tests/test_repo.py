@@ -15,6 +15,12 @@ class RepoTest(unittest.TestCase):
             '"3.12"',
             "python -m unittest discover -s tests -t . -v",
             "python tests/check.py",
+            "contents: read",
+            "fail-fast: false",
+            "timeout-minutes: 10",
+            "cancel-in-progress: true",
+            "persist-credentials: false",
+            "branches: [main]",
         ):
             self.assertIn(needle, text)
 
