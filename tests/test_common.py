@@ -540,6 +540,56 @@ class LockTest(CoreTest):
                 common.meter()
         self.assertLess(time.monotonic() - start, 1.0)
 
+    def _make_stale(self, path, text="dead"):
+        path.write_text(text, encoding="utf-8")
+        old = os.path.getmtime(path) - 120
+        os.utime(path, (old, old))
+
+    def test_stale_lock_that_cannot_be_renamed_times_out(self):
+        # Run in a child so a regression (an endless spin) fails on the timeout, not by hanging.
+        self._make_stale(self.dir / ".lock")
+        code = ("import sys, time; sys.path.insert(0, sys.argv[1]); import common\n"
+                "from unittest import mock\n"
+                "common.LOCK_WAIT = 0.3\n"
+                "start = time.monotonic()\n"
+                "with mock.patch('common.os.rename', side_effect=PermissionError('busy')):\n"
+                "    try:\n"
+                "        common.meter()\n"
+                "    except common.CoreError as exc:\n"
+                "        print('CoreError', round(time.monotonic() - start, 2), exc)\n")
+        proc = subprocess.run([sys.executable, "-c", code, str(helpers.SKILL / "scripts")],
+                              capture_output=True, text=True, env=dict(os.environ), timeout=20)
+        self.assertTrue(proc.stdout.startswith("CoreError"), proc.stdout + proc.stderr)
+        self.assertLess(float(proc.stdout.split()[1]), 3.0)
+        self.assertIn("lock", proc.stdout)
+
+    def test_failed_nonce_write_cleans_up(self):
+        with mock.patch("common.os.write", side_effect=OSError(28, "No space left on device")):
+            with self.assertRaisesRegex(common.CoreError, "No space"):
+                common.meter()
+        self.assertEqual(list(self.dir.iterdir()), [])
+
+    def test_put_back_never_overwrites_a_lock(self):
+        lock, side = self.dir / ".lock", self.dir / ".lock.side"
+        lock.write_text("someone-else", encoding="utf-8")
+        side.write_text("mine", encoding="utf-8")
+        self.assertIs(common._put_back(side, lock), False)
+        self.assertEqual(lock.read_text(encoding="utf-8"), "someone-else")
+        self.assertTrue(side.exists())
+
+    def test_put_back_when_name_is_free(self):
+        lock, side = self.dir / ".lock", self.dir / ".lock.side"
+        side.write_text("mine", encoding="utf-8")
+        self.assertIs(common._put_back(side, lock), True)
+        self.assertEqual(lock.read_text(encoding="utf-8"), "mine")
+        self.assertFalse(side.exists())
+
+    def test_old_side_files_are_cleaned_up(self):
+        self._make_stale(self.dir / ".lock.111-aaaa")
+        (self.dir / ".lock.222-bbbb").write_text("fresh", encoding="utf-8")
+        common.meter()
+        self.assertEqual(sorted(p.name for p in self.dir.iterdir()), [".lock.222-bbbb", "run.json"])
+
     def _workers(self, body, n=4):
         code = "import sys; sys.path.insert(0, sys.argv[1]); import common\n" + body
         procs = [subprocess.Popen([sys.executable, "-c", code, str(helpers.SKILL / "scripts"), str(i)],

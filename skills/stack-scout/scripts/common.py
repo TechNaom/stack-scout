@@ -77,27 +77,39 @@ def _put_back(side, lock) -> bool:
         return False
 
 
-def _break_stale(lock) -> None:
+def _break_stale(lock) -> bool:
     """Remove lock if it is stale, without ever removing a fresh one.
 
     The lock is first renamed to a unique side name, so only one waiter gets
     it; the renamed file is checked again, because another waiter may have
     broken the old lock and taken a fresh one since our first look. A fresh
     one is put back (when the name is free); if it cannot be, it is left as a
-    side file and nothing is deleted.
+    side file and nothing is deleted. Returns True only when a stale lock was
+    removed, so the caller retries at once; otherwise it waits as usual.
     """
     side = lock.with_name(f"{lock.name}.{os.getpid()}-{secrets.token_hex(6)}")
     try:
         os.rename(lock, side)
     except OSError:
-        return  # gone already, or another waiter renamed it first
+        return False  # gone already, renamed by another waiter, or not ours to move
     if _stale(side):
         try:
             os.unlink(side)
+            return True
         except OSError:
-            pass
-    else:
-        _put_back(side, lock)
+            return False
+    _put_back(side, lock)
+    return False
+
+
+def _clean_side_files(folder) -> None:
+    """Remove .lock.* side files left by crashed waiters, once older than LOCK_STALE."""
+    for side in folder.glob(".lock.*"):
+        if _stale(side):
+            try:
+                os.unlink(side)
+            except OSError:
+                pass
 
 
 @contextlib.contextmanager
@@ -123,8 +135,7 @@ def locked(folder=None):
         try:
             fd = os.open(str(lock), os.O_CREAT | os.O_EXCL | os.O_WRONLY)
         except (FileExistsError, PermissionError):
-            if _stale(lock):
-                _break_stale(lock)
+            if _stale(lock) and _break_stale(lock):
                 continue
             if time.monotonic() >= deadline:
                 raise CoreError(f"could not take the lock {lock.name} in {folder} "
@@ -135,9 +146,16 @@ def locked(folder=None):
             raise CoreError(f"cannot create the lock {lock.name} in {folder}: {exc}") from None
         try:
             os.write(fd, nonce.encode("ascii"))
-        finally:
+        except OSError as exc:
             os.close(fd)
+            try:
+                os.unlink(lock)
+            except OSError:
+                pass
+            raise CoreError(f"cannot write the lock {lock.name} in {folder}: {exc}") from None
+        os.close(fd)
         break
+    _clean_side_files(folder)
     try:
         yield
     finally:
