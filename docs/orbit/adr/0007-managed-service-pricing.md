@@ -1,6 +1,6 @@
 # ADR 0007: Managed-service prices are read from the provider's official page during the run
 
-Date: 2026-11-27. Status: proposed
+Date: 2026-11-27. Status: accepted
 
 ## Context
 R15 (each managed service linked to its official pricing page with the date checked, or "to verify") and R7 (a

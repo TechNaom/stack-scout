@@ -1,6 +1,6 @@
 # ADR 0003: Known vulnerabilities come from OSV.dev, with GitHub advisories as the fallback
 
-Date: 2026-11-27. Status: proposed
+Date: 2026-11-27. Status: accepted
 
 ## Context
 R5 needs known vulnerabilities for each finalist. Vulnerability databases look up **packages** (an ecosystem and a

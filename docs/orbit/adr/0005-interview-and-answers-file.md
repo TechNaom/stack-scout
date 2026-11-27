@@ -1,6 +1,6 @@
 # ADR 0005: The interview uses Claude's question screen; non-interactive runs read an answers file
 
-Date: 2026-11-27. Status: proposed
+Date: 2026-11-27. Status: accepted
 
 ## Context
 R3 (interview), R14 (non-interactive mode), R2 (open points). Claude Code's question tool shows at most 4 questions

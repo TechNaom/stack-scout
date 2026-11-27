@@ -1,6 +1,6 @@
 # ADR 0002: GitHub facts come from batched GraphQL calls with the user's own login
 
-Date: 2026-11-27. Status: proposed
+Date: 2026-11-27. Status: accepted
 
 ## Context
 R5 (check each candidate live: exists, stars, licence, last push, archived, latest release, contributors), N1 (about

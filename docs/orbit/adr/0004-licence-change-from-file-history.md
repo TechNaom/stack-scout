@@ -1,6 +1,6 @@
 # ADR 0004: A recent licence change is found from the licence file's own history
 
-Date: 2026-11-27. Status: proposed
+Date: 2026-11-27. Status: accepted
 
 ## Context
 R6 flags projects whose licence changed to a source-available one in the last 24 months. GitHub's API returns only

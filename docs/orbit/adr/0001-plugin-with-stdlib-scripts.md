@@ -1,6 +1,6 @@
 # ADR 0001: A Claude Code plugin of skills plus small standard-library Python scripts
 
-Date: 2026-11-27. Status: proposed
+Date: 2026-11-27. Status: accepted
 
 ## Context
 R11 (install on any Claude Code surface), R12 (a command and a skill other plugins can call), N1 (Rs 0 for users),

@@ -1,6 +1,6 @@
 # ADR 0006: The user's own model reasons; code owns every fact, every query and the final check
 
-Date: 2026-11-27. Status: proposed
+Date: 2026-11-27. Status: accepted
 
 ## Context
 - **N2:** no invented projects, licences or numbers.

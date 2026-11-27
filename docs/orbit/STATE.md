@@ -4,13 +4,12 @@ Started: 2026-11-27
 
 ## Current
 
-- Stage: blueprint
-- Status: waiting for approval   <!-- in progress | waiting for approval | approved | needs review -->
+- Stage: assemble
+- Status: in progress   <!-- in progress | waiting for approval | approved | needs review -->
 
 ## Settings
 
-- Code host: github (public repo TechNaom/stack-scout, **not created yet**: waiting for the owner's choice,
-  now or at Launch; until then the work is in the local git repo only)
+- Code host: github (public repo TechNaom/stack-scout, created 2026-11-27 on the owner's go-ahead)
 - Work branch: main *(proposed)*
 - Release branch: main
 - Promotion: none
@@ -25,8 +24,8 @@ Started: 2026-11-27
 | Stage | Status | Approved by | Date |
 |---|---|---|---|
 | ignite | approved | owner ("yes") | 2026-11-27 |
-| blueprint | waiting for approval | | |
-| assemble | not started | | |
+| blueprint | approved | owner ("yes proceed") | 2026-11-27 |
+| assemble | in progress | | |
 | build | not started | | |
 | test-flight | not started | | |
 | launch | not started | | |
@@ -51,6 +50,9 @@ Started: 2026-11-27
   "recently relicensed".
 
 ## Log
+
+- 2026-11-27 Blueprint approved by the owner ("yes proceed"); price check stays strict (current design). Public repo
+  created and pushed on the owner's go-ahead. Assemble started.
 
 - 2026-11-27 Blueprint second review (9/10) applied: ADR tables one line per row; private terms beat the
   tech-term allowlist (+ eval); fact-shaped text instead of all digits; licence ids and phrases, not bare words;
