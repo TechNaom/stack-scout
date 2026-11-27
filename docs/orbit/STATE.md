@@ -4,8 +4,8 @@ Started: 2026-11-27
 
 ## Current
 
-- Stage: assemble
-- Status: waiting for approval   <!-- in progress | waiting for approval | approved | needs review -->
+- Stage: build
+- Status: in progress   <!-- in progress | waiting for approval | approved | needs review -->
 
 ## Settings
 
@@ -25,8 +25,8 @@ Started: 2026-11-27
 |---|---|---|---|
 | ignite | approved | owner ("yes") | 2026-11-27 |
 | blueprint | approved | owner ("yes proceed") | 2026-11-27 |
-| assemble | waiting for approval | | |
-| build | not started | | |
+| assemble | approved | owner ("a,b,c": yes to Assemble with MIT) | 2026-11-27 |
+| build | in progress | | |
 | test-flight | not started | | |
 | launch | not started | | |
 | orbit | not started | | |
@@ -44,12 +44,14 @@ Started: 2026-11-27
 
 ## Open questions
 
-- Licence for Stack Scout itself: MIT (proposed).
+- ~~Licence for Stack Scout itself~~ MIT, owner 2026-11-27.
 - The proposed numbers in the PRD: 20 test SOWs, 8 questions, about 200 tool calls per run, 10 minutes of the
   user's time and about 30 minutes of clock time, 12 months without activity counts as dead, 24 months for
   "recently relicensed".
 
 ## Log
+
+- 2026-11-27 Assemble approved by the owner; licence MIT. Issues #1-#37 created (labels M1-M4). Build starts with T1 (#1).
 
 - 2026-11-27 Assemble: tasks.md (4 milestones, 37 tasks, cards for M1's 12); two cold reads by fresh agents (12 + 11
   questions) answered on the cards and in architecture.md; Fast tests and Full suite fixed at T1. Waiting for

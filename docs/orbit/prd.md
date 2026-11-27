@@ -66,5 +66,5 @@ Building or deploying the stack; paid data sources; private repositories; a web 
 | Public SOWs are rare, so the 20 test SOWs (with labelled open points, a planted mismatch, a planted client name, planted dead and vulnerable projects) have to be written | Evals cannot start without them | A known task in Assemble: write and label the test SOWs first |
 
 ## Open questions
-- Licence for Stack Scout itself: MIT *(proposed)*.
+- ~~Licence for Stack Scout itself~~: **MIT** (owner, 2026-11-27).
 - The exact eval bars marked *(proposed)* above (20 test SOWs, 8 questions, 200 tool calls, 10 and 30 minutes, 12 months, 24 months for relicensing).

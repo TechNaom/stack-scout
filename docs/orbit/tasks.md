@@ -48,58 +48,58 @@ Product-wide conventions (every card follows them):
 
 | ID | Task | Serves | Test (written first) | Done check | Depends on | Size | Issue |
 |---|---|---|---|---|---|---|---|
-| T1 | Repository basics, licence and CI on 3 platforms | N5, N7 | `tests/test_repo.py`: CI file has the 3-OS matrix and runs both suites | CI green on Linux, Windows and macOS for the pull request | - | S | |
-| T2 | Hand-written schemas and the schema checker | R12, N2 | `tests/test_schema.py`: good and bad examples for all 6 schemas | `python -m unittest tests.test_schema -v` OK | T1 | M | |
-| T3 | First 5 labelled test SOWs | R2, N2, N3 | `tests/test_fixtures.py`: every SOW has a label entry that passes `labels.schema.json` | the fixture test is OK | T2 | M | |
-| T4 | Shared core: clock, token, redaction, facts file, run meter, `run.py` | N1, N6, R9 | `tests/test_common.py` | the common test is OK | T2 | M | |
-| T5 | HTTP client with back-off, and the mock API server | N6 | `tests/test_http.py` against `tests/mock_api.py` (200, 403, 429, Retry-After, 3 retries) | the http test is OK | T4 | M | |
-| T6 | `guard.py` and its word lists | N3 | `tests/test_guard.py` incl. a private name that is also a tech term | the guard test is OK | T4 | M | |
-| T7 | `facts.py verify`: batched GraphQL, REST-only mode, bot rule | R5, R6, N6 | `tests/test_facts_verify.py` against the mock server | the facts test is OK | T5, T6 | M | |
-| T8 | `validate.py`: schema, subjects, required fields, prose rules | N2, R9, R10 | `tests/test_validate.py` with the good and bad prose lists | the validate test is OK | T2, T4 | M | |
-| T9 | `render.py`: `stack.md` from `stack.json` and the facts file | R7, R9, R10 | `tests/test_render.py`: golden file, every fact linked | the render test is OK | T8 | M | |
-| T10 | Starter question bank, the skill and the `/stack-scout` command | R2, R3, R4, R12, R14 | `tests/check.py`: skill and command shape, questions pass their schema | full suite OK | T2, T6, T7, T8, T9 | M | |
-| T11 | Installers and their CI test | R11 | `tests/test_install.py`: install, rerun, uninstall into a temp config | CI green on 3 platforms | T10 | M | |
-| T12 | End to end: live smoke and one real skill run | R1, R5, R7 | `tests/smoke_live.py` (skipped without a token) | live smoke prints `ok`; a fresh agent's skill run on SOW 01 writes a validated `stack.md` | T11, T3 | S | |
+| T1 | Repository basics, licence and CI on 3 platforms | N5, N7 | `tests/test_repo.py`: CI file has the 3-OS matrix and runs both suites | CI green on Linux, Windows and macOS for the pull request | - | S | #1 |
+| T2 | Hand-written schemas and the schema checker | R12, N2 | `tests/test_schema.py`: good and bad examples for all 6 schemas | `python -m unittest tests.test_schema -v` OK | T1 | M | #2 |
+| T3 | First 5 labelled test SOWs | R2, N2, N3 | `tests/test_fixtures.py`: every SOW has a label entry that passes `labels.schema.json` | the fixture test is OK | T2 | M | #3 |
+| T4 | Shared core: clock, token, redaction, facts file, run meter, `run.py` | N1, N6, R9 | `tests/test_common.py` | the common test is OK | T2 | M | #4 |
+| T5 | HTTP client with back-off, and the mock API server | N6 | `tests/test_http.py` against `tests/mock_api.py` (200, 403, 429, Retry-After, 3 retries) | the http test is OK | T4 | M | #5 |
+| T6 | `guard.py` and its word lists | N3 | `tests/test_guard.py` incl. a private name that is also a tech term | the guard test is OK | T4 | M | #6 |
+| T7 | `facts.py verify`: batched GraphQL, REST-only mode, bot rule | R5, R6, N6 | `tests/test_facts_verify.py` against the mock server | the facts test is OK | T5, T6 | M | #7 |
+| T8 | `validate.py`: schema, subjects, required fields, prose rules | N2, R9, R10 | `tests/test_validate.py` with the good and bad prose lists | the validate test is OK | T2, T4 | M | #8 |
+| T9 | `render.py`: `stack.md` from `stack.json` and the facts file | R7, R9, R10 | `tests/test_render.py`: golden file, every fact linked | the render test is OK | T8 | M | #9 |
+| T10 | Starter question bank, the skill and the `/stack-scout` command | R2, R3, R4, R12, R14 | `tests/check.py`: skill and command shape, questions pass their schema | full suite OK | T2, T6, T7, T8, T9 | M | #10 |
+| T11 | Installers and their CI test | R11 | `tests/test_install.py`: install, rerun, uninstall into a temp config | CI green on 3 platforms | T10 | M | #11 |
+| T12 | End to end: live smoke and one real skill run | R1, R5, R7 | `tests/smoke_live.py` (skipped without a token) | live smoke prints `ok`; a fresh agent's skill run on SOW 01 writes a validated `stack.md` | T11, T3 | S | #12 |
 
 ## M2 Every must-have check
 
 | ID | Task | Serves | Test (written first) | Done check | Depends on | Size | Issue |
 |---|---|---|---|---|---|---|---|
-| T13 | `sow.py`: .docx paragraphs, headings and tables; .md and .txt; unreadable files exit 2 | R1 | `tests/test_sow.py` with .docx files built by the test from XML | sow test OK | T4 | M | |
-| T14 | `facts.py search` (guard enforced in code) and contributor counts for finalists | R5, N3 | `tests/test_facts_search.py`: a blocked query makes no network call | search test OK | T7 | M | |
-| T15 | deps.dev: repository to packages, OpenSSF Scorecard, manifest fallback | R5 | `tests/test_depsdev.py` incl. 404 fallback | test OK | T7 | M | |
-| T16 | `osv.py`: querybatch, `next_page_token`, severity, "no package: not checkable" | R5 | `tests/test_osv.py` | test OK; `vulnerabilities` added to required fields | T15 | M | |
-| T17 | `licence.py`: licence path, 24-month history, renames, family | R6 | `tests/test_licence.py` | test OK; `licence_history` required for finalists | T7 | M | |
-| T18 | Licence-conflict rules with the "distribute" answer, and `accepted` | R6 | `tests/test_validate_licence.py` | test OK | T17, T8 | S | |
-| T19 | `facts.py record-price` (strict) and `skills/stack-scout/data/pricing-urls.json`; services checked in `validate.py` | R15, R9 | `tests/test_price.py`: amount on the page kept, missing amount "to verify" | test OK | T5, T8 | M | |
-| T20 | `skills/stack-scout/data/compat.json` and the compatibility rules in `validate.py` | R16 | `tests/test_compat.py`: a planted mismatch fails | test OK | T8, T15 | M | |
-| T21 | Full question bank and `answers.json` rules | R2, R3, R14 | `tests/test_answers.py`: missing id assumed, unknown id error | test OK | T10 | M | |
-| T22 | Skill full flow: question screens, text fallback, drop rules, build-yourself, private terms, guard on own searches, cap, `stack.prev`, `.gitignore` note | R3, R4, R6, R7, R14, N1, N3 | `tests/check.py` rules for every instruction | full suite OK | T13-T21 | M | |
-| T23 | `--adr` output and the ADR shape check | R8 | `tests/test_adr.py` | test OK | T22 | S | |
-| T24 | Token redaction across every script | N6, security | `tests/test_redaction.py` | test OK | T13-T19 | S | |
-| T25 | Test SOWs 06-13 with labels (.docx, .txt, PDF; planted mismatch; client name that is a GitHub topic) | R1, R16, N3 | fixture test | test OK | T3, T13 | M | |
-| T26 | Test SOWs 14-20 with labels (planted relicensed, vulnerable, bot-only, fake) | R5, R6, N2 | fixture test | test OK | T25 | M | |
+| T13 | `sow.py`: .docx paragraphs, headings and tables; .md and .txt; unreadable files exit 2 | R1 | `tests/test_sow.py` with .docx files built by the test from XML | sow test OK | T4 | M | #13 |
+| T14 | `facts.py search` (guard enforced in code) and contributor counts for finalists | R5, N3 | `tests/test_facts_search.py`: a blocked query makes no network call | search test OK | T7 | M | #14 |
+| T15 | deps.dev: repository to packages, OpenSSF Scorecard, manifest fallback | R5 | `tests/test_depsdev.py` incl. 404 fallback | test OK | T7 | M | #15 |
+| T16 | `osv.py`: querybatch, `next_page_token`, severity, "no package: not checkable" | R5 | `tests/test_osv.py` | test OK; `vulnerabilities` added to required fields | T15 | M | #16 |
+| T17 | `licence.py`: licence path, 24-month history, renames, family | R6 | `tests/test_licence.py` | test OK; `licence_history` required for finalists | T7 | M | #17 |
+| T18 | Licence-conflict rules with the "distribute" answer, and `accepted` | R6 | `tests/test_validate_licence.py` | test OK | T17, T8 | S | #18 |
+| T19 | `facts.py record-price` (strict) and `skills/stack-scout/data/pricing-urls.json`; services checked in `validate.py` | R15, R9 | `tests/test_price.py`: amount on the page kept, missing amount "to verify" | test OK | T5, T8 | M | #19 |
+| T20 | `skills/stack-scout/data/compat.json` and the compatibility rules in `validate.py` | R16 | `tests/test_compat.py`: a planted mismatch fails | test OK | T8, T15 | M | #20 |
+| T21 | Full question bank and `answers.json` rules | R2, R3, R14 | `tests/test_answers.py`: missing id assumed, unknown id error | test OK | T10 | M | #21 |
+| T22 | Skill full flow: question screens, text fallback, drop rules, build-yourself, private terms, guard on own searches, cap, `stack.prev`, `.gitignore` note | R3, R4, R6, R7, R14, N1, N3 | `tests/check.py` rules for every instruction | full suite OK | T13-T21 | M | #22 |
+| T23 | `--adr` output and the ADR shape check | R8 | `tests/test_adr.py` | test OK | T22 | S | #23 |
+| T24 | Token redaction across every script | N6, security | `tests/test_redaction.py` | test OK | T13-T19 | S | #24 |
+| T25 | Test SOWs 06-13 with labels (.docx, .txt, PDF; planted mismatch; client name that is a GitHub topic) | R1, R16, N3 | fixture test | test OK | T3, T13 | M | #25 |
+| T26 | Test SOWs 14-20 with labels (planted relicensed, vulnerable, bot-only, fake) | R5, R6, N2 | fixture test | test OK | T25 | M | #26 |
 
 ## M3 Evals
 
 | ID | Task | Serves | Test (written first) | Done check | Depends on | Size | Issue |
 |---|---|---|---|---|---|---|---|
-| T27 | Eval harness: cases in Idea to Orbit's format, a manual workflow with a cost ceiling, `tests/transcript_check.py` (queries, tool calls, questions) | N1, N3, N7 | `tests/test_transcript_check.py` on recorded transcripts | test OK | T22 | M | |
-| T28 | Eval cases: planted fake, archived, dead, bot-only, vulnerable and relicensed projects never kept | N2, R5, R6 | the cases themselves | 1 run per case passes | T27, T26 | M | |
-| T29 | Eval cases: planted client name, and one that is a GitHub topic, in no query or web search | N3 | the cases | passes | T27 | S | |
-| T30 | Eval cases: mismatch caught, non-interactive run lists assumptions, 8 questions or fewer, about 200 calls or fewer, build-yourself outcome | R16, R14, R3, N1, R7 | the cases | passes | T27 | M | |
-| T31 | Facts-correct scorer (re-fetch every rendered fact) and timed runs on all 20 SOWs | N2, N4, R5 | `tests/test_scorer.py` | report in `docs/eval-results.md` | T28-T30 | M | |
-| T32 | `stack.json` consumer contract test (how Idea to Orbit reads it) | R12 | `tests/test_contract.py` | test OK | T22 | S | |
+| T27 | Eval harness: cases in Idea to Orbit's format, a manual workflow with a cost ceiling, `tests/transcript_check.py` (queries, tool calls, questions) | N1, N3, N7 | `tests/test_transcript_check.py` on recorded transcripts | test OK | T22 | M | #27 |
+| T28 | Eval cases: planted fake, archived, dead, bot-only, vulnerable and relicensed projects never kept | N2, R5, R6 | the cases themselves | 1 run per case passes | T27, T26 | M | #28 |
+| T29 | Eval cases: planted client name, and one that is a GitHub topic, in no query or web search | N3 | the cases | passes | T27 | S | #29 |
+| T30 | Eval cases: mismatch caught, non-interactive run lists assumptions, 8 questions or fewer, about 200 calls or fewer, build-yourself outcome | R16, R14, R3, N1, R7 | the cases | passes | T27 | M | #30 |
+| T31 | Facts-correct scorer (re-fetch every rendered fact) and timed runs on all 20 SOWs | N2, N4, R5 | `tests/test_scorer.py` | report in `docs/eval-results.md` | T28-T30 | M | #31 |
+| T32 | `stack.json` consumer contract test (how Idea to Orbit reads it) | R12 | `tests/test_contract.py` | test OK | T22 | S | #32 |
 
 ## M4 Release and operations
 
 | ID | Task | Serves | Test (written first) | Done check | Depends on | Size | Issue |
 |---|---|---|---|---|---|---|---|
-| T33 | README, getting started, how it works, FAQ, CONTRIBUTING, SECURITY, CHANGELOG | N5 | `tests/check.py`: links resolve, no placeholder text | full suite OK | T31 | M | |
-| T34 | Weekly API health workflow (live smoke on GitHub, OSV, deps.dev; a failure emails the owner) | N6, operations | `tests/test_repo.py` reads the workflow | one manual run green | T12, T16 | S | |
-| T35 | Release checklist, `v0.1.0` tag and GitHub release | N5 | the checklist | release page live | T33 | S | |
-| T36 | Rollback rehearsal: install the previous tag, by script and by `/plugin` | N5 | written steps | rehearsal recorded in `release.md` | T35 | S | |
-| T37 | Owner rating on 5 real SOWs | success measure | - | 4 of 5 or better recorded | T35 | S | |
+| T33 | README, getting started, how it works, FAQ, CONTRIBUTING, SECURITY, CHANGELOG | N5 | `tests/check.py`: links resolve, no placeholder text | full suite OK | T31 | M | #33 |
+| T34 | Weekly API health workflow (live smoke on GitHub, OSV, deps.dev; a failure emails the owner) | N6, operations | `tests/test_repo.py` reads the workflow | one manual run green | T12, T16 | S | #34 |
+| T35 | Release checklist, `v0.1.0` tag and GitHub release | N5 | the checklist | release page live | T33 | S | #35 |
+| T36 | Rollback rehearsal: install the previous tag, by script and by `/plugin` | N5 | written steps | rehearsal recorded in `release.md` | T35 | S | #36 |
+| T37 | Owner rating on 5 real SOWs | success measure | - | 4 of 5 or better recorded | T35 | S | #37 |
 
 ## Coverage
 
@@ -140,7 +140,7 @@ ceiling (T27).
 
 ### T1 Repository basics, licence and CI on 3 platforms
 
-Serves: N5, N7. Depends on: none. Size: S. Issue: <#>
+Serves: N5, N7. Depends on: none. Size: S. Issue: #1
 
 **Files**
 - Create: `LICENSE` (MIT, "Copyright (c) 2026 Manohar Papasani"), `README.md` (one paragraph from
@@ -176,8 +176,7 @@ Serves: N5, N7. Depends on: none. Size: S. Issue: <#>
    `https://github.com/TechNaom/stack-scout`, license `MIT`), `marketplace.json` (copy the shape of
    `idea-to-orbit/.claude-plugin/marketplace.json`, owner "TechNaom AI R&D Labs"), `LICENSE`, `README.md`,
    `.gitignore` (`.env`, `.env.*`, `!.env.example`, `__pycache__/`, `.stack-scout/`, `evals/results/`, `.DS_Store`)
-   and `.gitattributes` (`* text=auto eol=lf`, so golden `.md` and `.json` files keep LF on Windows runners too). The licence is MIT only after the owner
-   confirms it at the Assemble gate; if they choose another, use that.
+   and `.gitattributes` (`* text=auto eol=lf`, so golden `.md` and `.json` files keep LF on Windows runners too). The licence is MIT (owner, 2026-11-27).
 4. Write `tests/check.py` with the T1 checks. Run `python tests/check.py`. Expect: `ok: 7 checks`.
 5. Run the full suite: `python -m unittest discover -s tests -t . -v && python tests/check.py`. Expect: `OK`, then
    `ok: 7 checks`.
@@ -193,7 +192,7 @@ Serves: N5, N7. Depends on: none. Size: S. Issue: <#>
 
 ### T2 Hand-written schemas and the schema checker
 
-Serves: R12, N2. Depends on: T1. Size: M. Issue: <#>
+Serves: R12, N2. Depends on: T1. Size: M. Issue: #2
 
 **Files**
 - Create: `skills/stack-scout/schema/stack.schema.json`, `skills/stack-scout/schema/facts.schema.json`, `skills/stack-scout/schema/run.schema.json`,
@@ -257,7 +256,7 @@ must reject `true` (a Python bool is an int). Report every error, not only the f
 
 ### T3 First 5 labelled test SOWs
 
-Serves: R2, N2, N3. Depends on: T2. Size: M. Issue: <#>
+Serves: R2, N2, N3. Depends on: T2. Size: M. Issue: #3
 
 **Files**
 - Create: `tests/fixtures/sows/01-memo-generator.md`, `02-regulatory-filing.md`, `03-token-guard.md`,
@@ -290,7 +289,7 @@ bot-only, relicensed, vulnerable) come in T25-T26, after the scripts that check 
 
 ### T4 Shared core: clock, token, redaction, facts file, run meter
 
-Serves: N1, N6, R9. Depends on: T2 (the facts and run schemas). Size: M. Issue: <#>
+Serves: N1, N6, R9. Depends on: T2 (the facts and run schemas). Size: M. Issue: #4
 
 **Files**
 - Create: `skills/stack-scout/scripts/common.py`, `skills/stack-scout/scripts/run.py`,
@@ -355,7 +354,7 @@ Windows and Linux produce the same bytes.
 
 ### T5 HTTP client with back-off, and the mock API server
 
-Serves: N6. Depends on: T4. Size: M. Issue: <#>
+Serves: N6. Depends on: T4. Size: M. Issue: #5
 
 **Files**
 - Change: `skills/stack-scout/scripts/common.py` (add the HTTP part). Create: `tests/mock_api.py`. Test: `tests/test_http.py`.
@@ -399,7 +398,7 @@ Serves: N6. Depends on: T4. Size: M. Issue: <#>
 
 ### T6 `guard.py` and its word lists
 
-Serves: N3. Depends on: T4. Size: M. Issue: <#>
+Serves: N3. Depends on: T4. Size: M. Issue: #6
 
 **Files**
 - Create: `skills/stack-scout/scripts/guard.py`, `skills/stack-scout/data/common-words.txt`,
@@ -462,7 +461,7 @@ Never print the SOW text.
 
 ### T7 `facts.py verify`: batched GraphQL, REST-only mode, bot rule
 
-Serves: R5, R6, N6. Depends on: T5, T6. Size: M. Issue: <#>
+Serves: R5, R6, N6. Depends on: T5, T6. Size: M. Issue: #7
 
 **Files**
 - Create: `skills/stack-scout/scripts/facts.py`. Read: `skills/stack-scout/data/rules.json` (from T4). Test:
@@ -528,7 +527,7 @@ are public and come from GitHub); T14's `search` will.
 
 ### T8 `validate.py`: schema, subjects, required fields, prose rules
 
-Serves: N2, R9, R10. Depends on: T2, T4. Size: M. Issue: <#>
+Serves: N2, R9, R10. Depends on: T2, T4. Size: M. Issue: #8
 
 **Files**
 - Create: `skills/stack-scout/scripts/validate.py`, `skills/stack-scout/data/licences.json`. Test: `tests/test_validate.py`, fixtures in
@@ -596,7 +595,7 @@ exact field.
 
 ### T9 `render.py`: `stack.md` from `stack.json` and the facts file
 
-Serves: R7, R9, R10. Depends on: T8. Size: M. Issue: <#>
+Serves: R7, R9, R10. Depends on: T8. Size: M. Issue: #9
 
 **Files**
 - Create: `skills/stack-scout/scripts/render.py`, `skills/stack-scout/templates/stack.md` (read through `ROOT/"templates"`). Test: `tests/test_render.py`, golden
@@ -635,7 +634,7 @@ values inside table cells. The model never writes `stack.md` itself; this script
 
 ### T10 Starter question bank, the skill and the `/stack-scout` command
 
-Serves: R2, R3, R4, R12, R14. Depends on: T2, T6, T7, T8, T9. Size: M. Issue: <#>
+Serves: R2, R3, R4, R12, R14. Depends on: T2, T6, T7, T8, T9. Size: M. Issue: #10
 
 **Files**
 - Create: `skills/stack-scout/SKILL.md`, `skills/stack-scout/questions.json`, `commands/stack-scout.md`.
@@ -721,7 +720,7 @@ same questions as a numbered text list.
 
 ### T11 Installers and their CI test
 
-Serves: R11. Depends on: T10. Size: M. Issue: <#>
+Serves: R11. Depends on: T10. Size: M. Issue: #11
 
 **Files**
 - Create: `install.sh`, `install.ps1`. Test: `tests/test_install.py` (reads T9's fixtures in
@@ -777,7 +776,7 @@ Serves: R11. Depends on: T10. Size: M. Issue: <#>
 
 ### T12 End to end: live smoke and one real skill run
 
-Serves: R1, R5, R7. Depends on: T11, T3. Size: S. Issue: <#>
+Serves: R1, R5, R7. Depends on: T11, T3. Size: S. Issue: #12
 
 **Files**
 - Create: `tests/smoke_live.py`. Change: `docs/orbit/JOURNAL.md` (the result); and, for each guess the fresh
