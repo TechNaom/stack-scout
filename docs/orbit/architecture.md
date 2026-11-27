@@ -10,7 +10,7 @@ user's own model, does the reasoning:
 3. names the capabilities, then asks **standard-library Python scripts** for every fact.
 
 The scripts fetch GitHub facts in batches, vulnerabilities from OSV, licence history and service prices, and they
-guard every search query. The model picks among **verified** candidates and writes `stack.md` and `stack.json`.
+guard every search query. The model picks among **verified** candidates and writes `stack.json`; `render.py` writes `stack.md` from it.
 `validate.py` then rejects anything not backed by this run's facts. Nothing runs on a server, and nothing costs money.
 
 ## Context
@@ -119,8 +119,8 @@ listed as "assumed", and the rest is the same flow.
   facts file, `stack.md` or logs, and the scripts redact it from errors.
 - **Confidential input:** only generic queries leave the machine (`guard.py`, N3). The SOW stays in the user's session
   and is never sent to GitHub or OSV.
-- **No telemetry.** The facts file stays in the user's folder (`.stack-scout/`), and the installer suggests adding it
-  to `.gitignore`.
+- **No telemetry.** The facts file stays in the user's folder (`.stack-scout/`), and the skill suggests adding it
+  to `.gitignore` at the end of each run (point 10).
 
 ## AI
 
@@ -322,4 +322,23 @@ A second outside review (9/10) found these; each is now part of the design:
 6. **Bot-only history.** If the last 100 commits on the default branch are all by bots, the project is "only bot
    activity in the last 100 commits: to verify": not alive, and not silently dead. A planted bot-only project is in
    the test SOWs (ADR 0002).
+
+## Assemble cold-read decisions (2026-11-27)
+
+A fresh agent read the M1 task cards; these answers are now on the cards in [tasks.md](tasks.md):
+
+1. **Layout:** scripts, data, schemas, templates and the question bank live inside `skills/stack-scout/`. The skill
+   finds them from its own base directory, which Claude Code shows for plugin and script installs alike, so
+   nothing depends on `${CLAUDE_PLUGIN_ROOT}` reaching the shell. The installers copy only the skill folder and the
+   command (this replaces point 10's `<config>/stack-scout/` copy).
+2. **Six schemas,** not five: `labels.schema.json` for the test SOWs is added.
+3. **Capabilities name their layer** (`capabilities[].layer`); `validate.py` checks the outcome against that layer.
+4. **Services in M1** are `price:<service>` subjects backed by a `to_verify` fact (`facts.py to-verify`) until
+   `record-price` exists (T19).
+5. **One facts file per run:** its date is the day `run.json` started, so a run across UTC midnight is not split.
+6. **The default is shown first** on the question screen, labelled as the recommended choice and the
+   "use the default" path.
+7. **Bot-only projects** are kept but never preferred; chosen only when nothing confirmed-alive exists, and then
+   listed as a risk and under "To verify".
+8. **The private-names answer** never appears in `stack.json` or `stack.md`, and option labels are never terms.
 
