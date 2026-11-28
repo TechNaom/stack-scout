@@ -69,6 +69,49 @@ class ExtractTest(unittest.TestCase):
         self.assertTrue(guard.check("Halvorsen memo generator", set(), extracted, self.tech))
 
 
+class LeakTest(unittest.TestCase):
+    """Names that slipped past the first version, found by the leak hunt in review."""
+
+    def setUp(self):
+        self.common = guard.load_words("common-words.txt")
+        self.tech = guard.load_words("tech-terms.txt")
+
+    def blocked(self, sow, query, private=()):
+        extracted = guard.extract_terms(sow, self.common, self.tech)
+        return guard.check(query, set(private), extracted, self.tech)
+
+    def test_unicode_names(self):
+        self.assertTrue(self.blocked("Zoë Müller works here.", "müller memo tool"))
+        self.assertTrue(self.blocked("Zoë Müller works here.", "zoë memo tool"))
+        self.assertTrue(self.blocked("Østergaard Logistik needs a tool.", "østergaard memo"))
+
+    def test_name_starting_with_a_digit(self):
+        self.assertTrue(self.blocked("The client is 3M.", "3m memo tool"))
+
+    def test_possessive(self):
+        self.assertTrue(self.blocked("Halvorsen's team needs a tool.", "halvorsen memo tool"))
+        self.assertTrue(self.blocked("Halvorsen’s team needs a tool.", "halvorsen memo tool"))
+
+    def test_hyphen_and_underscore_in_the_query(self):
+        for query in ["halvorsen-memo", "halvorsen_memo", "memo-halvorsen"]:
+            self.assertTrue(self.blocked("Halvorsen needs a tool.", query), query)
+
+    def test_parts_of_hyphenated_and_dotted_names(self):
+        self.assertTrue(self.blocked("Halvorsen-Freight needs a tool.", "halvorsen memo"))
+        self.assertTrue(self.blocked("See Halvorsen.com for details.", "halvorsen memo"))
+
+    def test_punctuation_stripped_variants(self):
+        self.assertTrue(self.blocked("O'Brien Haulage needs a tool.", "obrien memo"))
+        self.assertTrue(self.blocked("Ships for AT&T daily.", "att memo"))
+
+    def test_each_uncommon_part_of_a_private_name_blocks(self):
+        self.assertTrue(guard.check("kite memo tool", {"Project Kite"}, set(), self.tech))
+        self.assertEqual(guard.check("project memo tool", {"Project Kite"}, set(), self.tech), [])
+
+    def test_tech_names_still_allowed(self):
+        self.assertEqual(self.blocked("It runs on Azure and AWS.", "azure aws memo tool"), [])
+
+
 class CheckTest(unittest.TestCase):
     def test_private_term_blocks_even_when_it_is_a_tech_term(self):
         hits = guard.check("salesforce crm connector", {"Salesforce"}, set(), {"salesforce"})

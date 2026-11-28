@@ -10,6 +10,7 @@ from the SOW (capitalised words and runs of them that are not common English or 
 unless they are technology names. A false positive only makes a query more generic; a false negative leaks,
 so when unsure, block. Never prints the SOW text.
 """
+import functools
 import json
 import pathlib
 import re
@@ -18,8 +19,9 @@ import sys
 import common
 
 DEFAULT_OPTIONS = ["None", "I'll type them"]
-WORD = r"[A-Z][A-Za-z0-9&'.-]*"
+TOKEN = re.compile(r"[\w&'’.-]+")
 ACRONYM = re.compile(r"[A-Z]{2,6}")
+SEPARATORS = re.compile(r"[-._'’&]")
 
 
 def load_words(name) -> set:
@@ -28,41 +30,88 @@ def load_words(name) -> set:
     return {line.strip().lower() for line in text.splitlines() if line.strip() and not line.startswith("#")}
 
 
-def _clean(word: str) -> str:
-    return word[:-1] if word.endswith(".") else word
+@functools.lru_cache(maxsize=None)
+def _common_words() -> frozenset:
+    return frozenset(load_words("common-words.txt"))
 
 
-def _keep(term: str, common_words: set, tech: set) -> bool:
+def _capitalised(token: str) -> bool:
+    """Starts with a capital letter, or with digits and then a capital (3M); any script, not only A-Z."""
+    letters = token.lstrip("0123456789")
+    return bool(letters) and letters[0].isupper()
+
+
+def _clean(token: str) -> str:
+    return token.rstrip(".-'’")
+
+
+def _keep(term: str, common_words, tech) -> bool:
     low = term.lower()
     if ACRONYM.fullmatch(term):
         return low not in tech
     return low not in common_words and low not in tech
 
 
+def _variants(term: str) -> set:
+    """The term, the term with punctuation removed, and each part of 2+ characters (Halvorsen's -> Halvorsen)."""
+    out = {term}
+    for t in [term]:
+        out.add(SEPARATORS.sub("", t))
+        out.update(part for part in SEPARATORS.split(t) if len(part) >= 2)
+        if " " in t:
+            out.update(part for part in t.split(" ") if len(part) >= 2)
+    return {v for v in out if v.strip()}
+
+
 def extract_terms(sow_text: str, common_words: set, tech: set) -> set:
-    """Capitalised words, and runs of 2+ of them within a sentence, that are not common or tech words."""
-    found = set()
-    for match in re.finditer(rf"{WORD}(?: {WORD})*", sow_text):
-        run, words = [], match.group(0).split(" ")
-        for i, raw in enumerate(words):
-            run.append(_clean(raw))
-            if raw.endswith(".") or i == len(words) - 1:  # a full stop ends the sentence, and the run
-                for start in range(len(run)):
-                    for end in range(start + 1, len(run) + 1):
-                        term = " ".join(run[start:end])
-                        if term and _keep(term, common_words, tech):
-                            found.add(term)
-                run = []
+    """Capitalised words, and runs of 2+ of them within a sentence, that are not common or tech words.
+
+    Goes further than the bare words: possessives, names with digits or non-English letters, and the parts of
+    hyphenated, dotted or apostrophe names (Halvorsen-Freight, Halvorsen.com, O'Brien) are kept too.
+    """
+    found, run, last_end = set(), [], -1
+
+    def flush():
+        for start in range(len(run)):
+            for stop in range(start + 1, len(run) + 1):
+                for term in _variants(" ".join(run[start:stop])):
+                    if _capitalised(term) and _keep(term, common_words, tech):
+                        found.add(term)
+        run.clear()
+
+    for match in TOKEN.finditer(sow_text):
+        raw = match.group(0)
+        word = _clean(raw)
+        if not word or not _capitalised(word):
+            flush()
+        else:
+            if run and sow_text[last_end:match.start()] != " ":
+                flush()
+            run.append(word)
+            if raw.endswith("."):  # a full stop ends the sentence, and the run
+                flush()
+        last_end = match.end()
+    flush()
     return found
 
 
 def _hits(query: str, term: str) -> bool:
-    return re.search(rf"(?<![\w-]){re.escape(term)}(?![\w-])", query, re.IGNORECASE) is not None
+    """Whole-word, case-insensitive; '-' and '_' count as word breaks, so halvorsen-memo is caught."""
+    return re.search(rf"(?<![^\W_]){re.escape(term)}(?![^\W_])", query, re.IGNORECASE) is not None
 
 
 def check(query: str, private: set, extracted: set, tech: set) -> list:
-    """The terms the query would leak; empty when it may be searched."""
-    hits = [t for t in sorted(private) if _hits(query, t)]
+    """The terms the query would leak; empty when it may be searched.
+
+    Private terms always block, and so does each uncommon part of them (Project Kite -> Kite). Extracted
+    terms block unless they are technology names.
+    """
+    common_words = _common_words()
+    private_all = set()
+    for term in private:
+        private_all.add(term)
+        private_all.update(v for v in _variants(term) if v.lower() not in common_words and v.lower() not in tech)
+    hits = [t for t in sorted(private_all) if _hits(query, t)]
     hits += [t for t in sorted(extracted) if t.lower() not in tech and t not in hits and _hits(query, t)]
     return hits
 
