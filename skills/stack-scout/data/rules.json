@@ -1,0 +1,9 @@
+{
+  "dead_after_months": 12,
+  "relicence_window_months": 24,
+  "tool_call_cap": 200,
+  "max_questions": 8,
+  "bot_window_commits": 100,
+  "required_fields": ["exists", "stars", "licence", "last_activity", "archived", "latest_release"],
+  "bot_logins": ["dependabot", "renovate", "github-actions", "pre-commit-ci", "mergify", "allcontributors", "snyk-bot", "imgbot"]
+}
