@@ -18,6 +18,7 @@ BATCH = 20
 NAME = re.compile(r"^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$")
 NO_LICENCE = "no licence GitHub can identify"
 BOTS_ONLY = "only bot activity in the last 100 commits"
+NO_COMMITS = "no commits on the default branch"
 NEEDS_SIGN_IN = "needs a GitHub sign-in: run gh auth login"
 REST_NOTE = "No GitHub sign-in: REST only. latest_release and primary_language are marked to verify."
 
@@ -53,6 +54,8 @@ def _licence(spdx):
 
 def _last_activity(commits):
     """(date, to_verify) of the newest commit by a person; commits are (date, login, name)."""
+    if not commits:
+        return None, NO_COMMITS
     human = [d for d, login, name in commits if d and not is_bot(login, name)]
     return (_date(max(human)), None) if human else (None, BOTS_ONLY)
 
@@ -64,7 +67,7 @@ def _facts(name, values: dict, to_verify: dict) -> list:
 
 
 def _graphql_batch(names, token):
-    """One request for up to 20 repositories. Returns (facts, checked, missing, points)."""
+    """One request for up to 20 repositories. Returns (facts, checked, missing, unchecked, points)."""
     aliases = "\n".join(f'  r{i}: repository(owner: "{n.split("/")[0]}", name: "{n.split("/")[1]}") {{ {REPO_FIELDS} }}'
                         for i, n in enumerate(names))
     query = f"query {{\n  rateLimit {{ cost remaining resetAt }}\n{aliases}\n}}"
@@ -78,12 +81,13 @@ def _graphql_batch(names, token):
         kinds = sorted({str(e.get("type")) for e in errors}) or [f"HTTP {status}"]
         raise common.CoreError(f"GitHub GraphQL request failed: {', '.join(kinds)}")
     not_found = {e["path"][0] for e in errors if e.get("type") == "NOT_FOUND" and e.get("path")}
-    facts, checked, missing = [], [], []
+    facts, checked, missing, unchecked = [], [], [], []
     for i, name in enumerate(names):
         node = data.get(f"r{i}")
         if node is None:
-            if f"r{i}" not in not_found:
-                raise common.CoreError(f"GitHub returned no data for {name}")
+            if f"r{i}" not in not_found:  # hidden (FORBIDDEN, SAML) or failed: not a fact either way
+                unchecked.append(name)
+                continue
             facts += _facts(name, {"exists": False}, {})
             missing.append(name)
             continue
@@ -98,7 +102,7 @@ def _graphql_batch(names, token):
             "primary_language": (node.get("primaryLanguage") or {}).get("name"), "last_activity": active,
         }, {"licence": lic_q, "last_activity": active_q})
         checked.append(name)
-    return facts, checked, missing, int((data.get("rateLimit") or {}).get("cost") or 0)
+    return facts, checked, missing, unchecked, int((data.get("rateLimit") or {}).get("cost") or 0)
 
 
 def _rest_one(name):
@@ -107,7 +111,15 @@ def _rest_one(name):
     status, repo = common.http_json("GET", f"{api}/repos/{name}")
     if status == 404:
         return _facts(name, {"exists": False}, {}), False
-    status, items = common.http_json("GET", f"{api}/repos/{name}/commits?per_page=100")
+    if not isinstance(repo, dict):
+        raise common.CoreError(f"GitHub sent no repository data for {name}")
+    try:
+        status, items = common.http_json("GET", f"{api}/repos/{name}/commits?per_page=100")
+    except RuntimeError as exc:
+        if "HTTP 409" not in str(exc):  # 409: an empty repository has no commits
+            raise
+        items = []
+    items = items if isinstance(items, list) else []
     commits = [(((c.get("commit") or {}).get("author") or {}).get("date"), (c.get("author") or {}).get("login"),
                 ((c.get("commit") or {}).get("author") or {}).get("name")) for c in (items or [])]
     lic, lic_q = _licence((repo.get("license") or {}).get("spdx_id"))
@@ -121,18 +133,20 @@ def _rest_one(name):
 
 def verify(repos: list) -> dict:
     """Check each repository, save the facts, and say what was checked, missing or left unchecked."""
+    repos = [_check_name(r) for r in repos]
     token = common.get_token()
     out = {"ok": True, "checked": [], "missing": [], "unchecked": [], "partial": False,
            "mode": "graphql" if token else "rest"}
     facts, points, done = [], 0, 0
-    try:
+    try:  # whatever happens, the facts already gathered are saved
         if token:
             for start in range(0, len(repos), BATCH):
                 batch = repos[start:start + BATCH]
-                got, checked, missing, cost = _graphql_batch(batch, token)
+                got, checked, missing, unchecked, cost = _graphql_batch(batch, token)
                 facts += got
                 out["checked"] += checked
                 out["missing"] += missing
+                out["unchecked"] += unchecked
                 points += cost
                 done = start + len(batch)
         else:
@@ -142,11 +156,12 @@ def verify(repos: list) -> dict:
                 out["checked" if found else "missing"].append(name)
                 done += 1
     except common.RateLimited:
-        out["partial"] = True
-        out["unchecked"] = repos[done:]
-    if facts:
-        common.add_facts(facts)
-    common.meter(script_calls=0, github_points=points, partial=True if out["partial"] else None)
+        out["unchecked"] += repos[done:]
+    finally:
+        if facts:
+            common.add_facts(facts)
+        out["partial"] = bool(out["unchecked"])
+        common.meter(script_calls=0, github_points=points, partial=True if out["partial"] else None)
     if not token:
         out["note"] = REST_NOTE
     return out
@@ -169,7 +184,7 @@ def main(argv) -> int:
     try:
         common.meter(script_calls=1)
         if argv[:1] == ["verify"] and len(argv) > 1:
-            out = verify([_check_name(a) for a in argv[1:]])
+            out = verify(argv[1:])
         elif argv[:1] == ["to-verify"]:
             out = _to_verify(argv[1:])
         else:

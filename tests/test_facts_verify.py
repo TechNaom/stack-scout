@@ -145,6 +145,44 @@ class GraphQLTest(FactsTest):
         code, out = self.run_facts("verify", "a/one")
         self.assertEqual((code, out["partial"], out["unchecked"]), (3, True, ["a/one"]))
 
+    def test_empty_repository_has_no_commits(self):
+        body = graphql(["a/empty"])
+        body["data"]["r0"]["defaultBranchRef"] = None
+        self.api.route("POST", "/graphql", [(200, {}, body)])
+        self.assertEqual(self.run_facts("verify", "a/empty")[0], 0)
+        item = self.saved()[("github:a/empty", "last_activity")]
+        self.assertEqual((item["value"], item["to_verify"]), (None, "no commits on the default branch"))
+
+    def test_hidden_alias_is_unchecked_and_the_rest_is_kept(self):
+        body = graphql(["a/one"])
+        body["data"]["r1"] = None
+        body["errors"] = [{"type": "FORBIDDEN", "path": ["r1"], "message": "SAML enforcement"}]
+        self.api.route("POST", "/graphql", [(200, {}, body)])
+        code, out = self.run_facts("verify", "a/one", "corp/secret")
+        self.assertEqual((code, out["partial"], out["unchecked"], out["checked"]), (3, True, ["corp/secret"], ["a/one"]))
+        self.assertIn(("github:a/one", "stars"), self.saved())
+        self.assertNotIn(("github:corp/secret", "exists"), self.saved())
+
+    def test_server_error_on_the_second_batch_keeps_the_first(self):
+        names = [f"o/r{i}" for i in range(21)]
+        self.api.route("POST", "/graphql", [(200, {}, graphql(names[:20])), (502, {}, {"message": "bad gateway"})])
+        code, out = self.run_facts("verify", *names)
+        self.assertEqual((code, out["ok"]), (2, False))
+        self.assertIn(("github:o/r19", "stars"), self.saved())
+
+    def test_meter_counts_one_script_call_and_the_points_of_a_partial_run(self):
+        names = [f"o/r{i}" for i in range(21)]
+        self.api.route("POST", "/graphql", [(200, {}, graphql(names[:20], cost=4)), (429, {}, None)])
+        self.assertEqual(self.run_facts("verify", *names)[0], 3)
+        run = json.loads((self.dir / "run.json").read_text(encoding="utf-8"))
+        self.assertEqual((run["script_calls"], run["github_points"], run["partial"]), (1, 4, True))
+        self.assertEqual(len(self.graphql_calls()), 5)  # the 429 was retried 3 times before giving up
+
+    def test_verify_checks_names_itself(self):
+        with self.assertRaisesRegex(common.CoreError, "^not owner/repo: "):
+            facts.verify(['a/b") { id } x: repository(owner: "c'])
+        self.assertEqual(self.graphql_calls(), [])
+
 
 class RestTest(FactsTest):
     def test_no_token_uses_rest_only(self):
@@ -171,6 +209,26 @@ class RestTest(FactsTest):
             self.assertEqual(facts_[("github:a/one", field)]["to_verify"], "needs a GitHub sign-in: run gh auth login")
         self.assertEqual(facts_[("github:a/gone", "exists")]["value"], False)
         self.assertEqual(out["missing"], ["a/gone"])
+
+    def test_empty_repository_in_rest_mode(self):
+        os.environ["GITHUB_TOKEN"] = ""
+        self.api.route("GET", "/repos/a/one", [(200, {}, {"stargazers_count": 1, "archived": False, "license": None})])
+        self.api.route("GET", "/repos/a/one/commits", [(409, {}, {"message": "Git Repository is empty."})])
+        self.api.route("GET", "/repos/a/two", [(200, {}, {"stargazers_count": 2, "archived": False, "license": None})])
+        self.api.route("GET", "/repos/a/two/commits", [(200, {}, [])])
+        code, out = self.run_facts("verify", "a/one", "a/two")
+        self.assertEqual((code, out["checked"]), (0, ["a/one", "a/two"]))
+        item = self.saved()[("github:a/one", "last_activity")]
+        self.assertEqual((item["value"], item["to_verify"]), (None, "no commits on the default branch"))
+
+    def test_rest_rate_limit_lists_the_rest_as_unchecked(self):
+        os.environ["GITHUB_TOKEN"] = ""
+        self.api.route("GET", "/repos/a/one", [(200, {}, {"stargazers_count": 1, "archived": False, "license": None})])
+        self.api.route("GET", "/repos/a/one/commits", [(200, {}, [])])
+        self.api.route("GET", "/repos/a/two", [(429, {}, None)])
+        code, out = self.run_facts("verify", "a/one", "a/two", "a/three")
+        self.assertEqual((code, out["checked"], out["unchecked"]), (3, ["a/one"], ["a/two", "a/three"]))
+        self.assertIn(("github:a/one", "stars"), self.saved())
 
 
 class CliTest(FactsTest):
