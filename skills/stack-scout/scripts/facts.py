@@ -133,7 +133,7 @@ def _rest_one(name):
 
 def verify(repos: list) -> dict:
     """Check each repository, save the facts, and say what was checked, missing or left unchecked."""
-    repos = [_check_name(r) for r in repos]
+    repos = list(dict.fromkeys(_check_name(r) for r in repos))
     token = common.get_token()
     out = {"ok": True, "checked": [], "missing": [], "unchecked": [], "partial": False,
            "mode": "graphql" if token else "rest"}

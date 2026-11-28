@@ -178,6 +178,11 @@ class GraphQLTest(FactsTest):
         self.assertEqual((run["script_calls"], run["github_points"], run["partial"]), (1, 4, True))
         self.assertEqual(len(self.graphql_calls()), 5)  # the 429 was retried 3 times before giving up
 
+    def test_repeated_names_are_checked_once(self):
+        self.api.route("POST", "/graphql", [(200, {}, graphql(["a/one"]))])
+        code, out = self.run_facts("verify", "a/one", "a/one")
+        self.assertEqual((code, out["checked"]), (0, ["a/one"]))
+
     def test_verify_checks_names_itself(self):
         with self.assertRaisesRegex(common.CoreError, "^not owner/repo: "):
             facts.verify(['a/b") { id } x: repository(owner: "c'])
