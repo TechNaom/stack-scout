@@ -14,6 +14,7 @@ written to the repo. Only public, non-sensitive work goes to free workers.
 | 2026-11-28 | T6 | fast / groq qwen3.8-27b (fallback) | 15.4 s | ranks 847-1100 | failed | looped: the same 9 words repeated for 250 lines |
 | 2026-11-28 | T6 | fast / groq gpt-oss-120b | 44.7 s | "Ogden's Basic English 850" | not as labelled | 1,103 words, 7 of the 100 core words missing; used only as extra common words, not credited to Ogden |
 | 2026-11-28 | T6 | heavy_code (all three) | 225 s | guard.py | failed | OpenRouter empty reply, NVIDIA timeout, Gemini Pro 429; the supervisor wrote it |
+| 2026-11-28 | T7 | heavy_code / nemotron-3-ultra (OpenRouter free) | 87.1 s | facts.py (370 lines) | right shape, 9 bugs | crashed on every batch (unpacked "owner/repo" strings as pairs); any GraphQL error (even one NOT_FOUND) failed the batch; RateLimited() built without its status; later batches lost from `unchecked`; every error wrapped as RuntimeError; `verify` with no names exited 0; REST ignored NOASSERTION; first non-bot commit instead of newest; an unused `$aliases` variable GitHub would reject. Rewritten by the supervisor at about half the size |
 
 Claude work saved on T5: roughly the drafting of 3 files (about 350 lines); review and fixes still took supervisor
 time. Next: more rows before any quality score is claimed.
@@ -22,8 +23,8 @@ After review, the combined Sonnet check still found 2 code edge cases (negative/
 the Nemotron draft and 4 untested card behaviours in the gpt-oss tests. Both drafts passed every test they came
 with, so "tests pass" was not enough evidence of quality for worker output either.
 
-## Tally so far (9 drafts, 2026-11-28)
-- Usable after fixes: 4 (mock server, tests, http client, tech list). Good as is: 0.
+## Tally so far (10 drafts, 2026-11-28)
+- Usable after fixes: 5 (mock server, tests, http client, tech list, facts.py structure). Good as is: 0.
 - Partial or not as asked: 3 (word lists). Failed outright: 2 (a looping fallback model; every heavy_code
   provider down for one request).
 - Strong at: boilerplate and well-specified code with tests to check it. Weak at: long exact lists (cut-offs,

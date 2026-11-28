@@ -51,6 +51,7 @@ Started: 2026-11-27
 
 ## Log
 
+- 2026-11-28 T7 done: facts.py verify (GraphQL batches of 20, REST-only mode, bot rule, rate limits as partial runs, to-verify). Tests 197 -> 217. Check found facts thrown away on an empty repository and a hidden repo failing the run; fixed; 17 mutants killed. Free-worker draft had 9 bugs, rewritten. Next: T8 (#8).
 - 2026-11-28 T6 done (PR #43): search guard and word lists. Tests 171 -> 197. Leak hunt found 3 must + 4 card-rule leaks, all fixed in the safe direction; owner decisions on name-like tech words and surnames recorded in evidence/T6.md; known limit: a tech word inside a client name passes alone. Free workers: 6 drafts, 0 usable as is. Next: T7 (#7).
 - 2026-11-28 T5 done (branch t5-http-client): HTTP client with back-off (`http_json`, `RateLimited`, API base functions) and the mock API. Tests 158 -> 171; test_http 13 in 2.4 s. First real use of free workers: 3 drafts (gpt-oss-120b x2, Nemotron Ultra x1) reviewed and fixed by the supervisor; combined Sonnet check PASS with 4 should-fixes, all fixed test-first. Next: T6 (#6).
 - 2026-11-28 T4 done (PR #41, merge c32ef7d): shared core (common.py lock with nonce, safe put-back, run meter; run.py; rules.json). Tests 95 -> 158, 7 checks ok; CI 6/6 green. Task check pass; code check fixed in 3 rounds (lost writes, lock race, stale-lock spin, failed nonce write, put-back test, side files); 7/7 mutants killed. Known limit: two narrow plain-lock windows (an OS lock would close them; not needed for a single-user CLI). run.py is not metered. Next: T5 (#5).
