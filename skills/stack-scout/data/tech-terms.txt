@@ -1,6 +1,8 @@
 # Technology names, lower case, one per line: GitHub featured topics (https://github.com/topics) plus clouds,
 # services, languages, databases and frameworks. Written 2026-11-28 (draft by gpt-oss-120b via the free-router,
 # reviewed; s3, ec2, lambda and a few AI names added by hand). Company names that are also topics stay in.
+# Left out on purpose (owner, 2026-11-28): tech words that are also common company or person names (shell,
+# zoom, chef, hive, dash, helm, dart, perl, rust, ruby, hapi, koa, jira, zend, lit), so a capitalised one in a SOW blocks.
 aws
 azure
 google cloud
@@ -82,14 +84,10 @@ typescript
 c#
 c++
 go
-rust
-ruby
 php
 kotlin
 swift
-dart
 scala
-perl
 haskell
 elixir
 clojure
@@ -97,7 +95,6 @@ r
 julia
 lua
 objective-c
-shell
 bash
 powershell
 sql
@@ -126,11 +123,9 @@ sdk
 cli
 docker
 kubernetes
-helm
 terraform
 ansible
 puppet
-chef
 jenkins
 gitlab ci
 github actions
@@ -236,7 +231,6 @@ bigquery
 clickhouse
 presto
 trino
-hive
 impala
 druid
 vertica
@@ -262,7 +256,6 @@ colab
 zeppelin
 r studio
 streamlit
-dash
 gradio
 fastapi
 django
@@ -275,8 +268,6 @@ pyramid
 falcon
 quart
 express
-koa
-hapi
 nestjs
 sails.js
 meteor
@@ -300,7 +291,6 @@ laravel
 symfony
 codeigniter
 yii
-zend
 cakephp
 phalcon
 express.js
@@ -318,7 +308,6 @@ ember.js
 backbone.js
 knockout.js
 alpine.js
-lit
 svelte
 solidjs
 preact
@@ -411,7 +400,6 @@ stripe
 shopify
 salesforce
 slack
-jira
 notion
 hubspot
 twilio
@@ -419,7 +407,6 @@ sendgrid
 zapier
 mailchimp
 intercom
-zoom
 microsoft teams
 discord
 github
@@ -618,3 +605,12 @@ lambda
 mistral
 llama
 ollama
+google
+apache
+node.js
+nodejs
+power bi
+apache kafka
+rest api
+microsoft
+amazon web services

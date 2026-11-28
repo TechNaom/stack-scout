@@ -15,6 +15,7 @@ import json
 import pathlib
 import re
 import sys
+import unicodedata
 
 import common
 
@@ -22,6 +23,8 @@ DEFAULT_OPTIONS = ["None", "I'll type them"]
 TOKEN = re.compile(r"[\w&'’.-]+")
 ACRONYM = re.compile(r"[A-Z]{2,6}")
 SEPARATORS = re.compile(r"[-._'’&]")
+FOLD = str.maketrans({"ø": "o", "Ø": "O", "æ": "ae", "Æ": "AE", "ß": "ss", "đ": "d", "ł": "l", "Ł": "L"})
+STOPWORDS = 300  # the first lines of common-words.txt are the most frequent words: never a name on their own
 
 
 def load_words(name) -> set:
@@ -33,6 +36,19 @@ def load_words(name) -> set:
 @functools.lru_cache(maxsize=None)
 def _common_words() -> frozenset:
     return frozenset(load_words("common-words.txt"))
+
+
+@functools.lru_cache(maxsize=None)
+def _stopwords() -> frozenset:
+    text = (common.ROOT / "data" / "common-words.txt").read_text(encoding="utf-8")
+    words = [l.strip().lower() for l in text.splitlines() if l.strip() and not l.startswith("#")]
+    return frozenset(words[:STOPWORDS])
+
+
+def _fold(text: str) -> str:
+    """Müller -> Muller, Østergaard -> Ostergaard, Straße -> Strasse."""
+    decomposed = unicodedata.normalize("NFKD", text.translate(FOLD))
+    return "".join(ch for ch in decomposed if not unicodedata.combining(ch))
 
 
 def _capitalised(token: str) -> bool:
@@ -60,6 +76,7 @@ def _variants(term: str) -> set:
         out.update(part for part in SEPARATORS.split(t) if len(part) >= 2)
         if " " in t:
             out.update(part for part in t.split(" ") if len(part) >= 2)
+    out |= {_fold(v) for v in out}
     return {v for v in out if v.strip()}
 
 
@@ -71,9 +88,28 @@ def extract_terms(sow_text: str, common_words: set, tech: set) -> set:
     """
     found, run, last_end = set(), [], -1
 
+    def plain(word):
+        low = word.lower()
+        return low in common_words or low in tech
+
     def flush():
+        covered = set()  # words inside a known tech phrase (GitHub Actions, Spring Boot)
+        for start in range(len(run)):
+            for stop in range(start + 2, len(run) + 1):
+                if " ".join(run[start:stop]).lower() in tech:
+                    covered.update(range(start, stop))
         for start in range(len(run)):
             for stop in range(start + 1, len(run) + 1):
+                idx = range(start, stop)
+                if all(i in covered for i in idx):
+                    continue
+                if stop - start > 1 and all(i in covered or plain(run[i]) for i in idx):
+                    continue  # only tech and common words: not a name
+                if stop - start > 1:  # a name: each word in it counts, even a common one (Brown Haulage)
+                    for i in idx:
+                        low = run[i].lower()
+                        if i not in covered and low not in tech and low not in _stopwords():
+                            found.update({run[i], _fold(run[i])})
                 for term in _variants(" ".join(run[start:stop])):
                     if _capitalised(term) and _keep(term, common_words, tech):
                         found.add(term)

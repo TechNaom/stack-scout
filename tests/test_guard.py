@@ -85,6 +85,30 @@ class LeakTest(unittest.TestCase):
         self.assertTrue(self.blocked("Zoë Müller works here.", "zoë memo tool"))
         self.assertTrue(self.blocked("Østergaard Logistik needs a tool.", "østergaard memo"))
 
+    def test_accents_dropped_in_the_query(self):
+        self.assertTrue(self.blocked("Zoë Müller works here.", "muller memo"))
+        self.assertTrue(self.blocked("Østergaard Logistik needs a tool.", "ostergaard memo"))
+        self.assertTrue(self.blocked("Straße Haulage needs a tool.", "strasse memo"))
+
+    def test_runs_made_only_of_tech_and_common_words_are_not_names(self):
+        sow = "We use Google Cloud, Spring Boot and GitHub Actions with a REST API."
+        for query in ["google cloud storage", "spring boot memo", "github actions ci", "rest api dashboard python"]:
+            self.assertEqual(self.blocked(sow, query), [], query)
+        self.assertEqual(self.blocked("The Data Team reviews Monthly Reports.", "data team monthly reports"), [])
+
+    def test_name_like_tech_words_block_when_capitalised(self):
+        # Owner's decision 2026-11-28: tech words that are also common company names are not on the tech list.
+        for word in ["shell", "zoom", "chef", "ruby", "jira"]:
+            self.assertNotIn(word, self.tech, word)
+        self.assertTrue(self.blocked("Our client Shell needs a tool.", "shell memo"))
+        self.assertEqual(self.blocked("It runs on Azure.", "azure memo"), [])
+
+    def test_common_word_inside_a_name_blocks_alone(self):
+        # Owner's decision 2026-11-28: Brown in "Brown Haulage" is a name; very frequent words like The are not.
+        sow = "Brown Haulage and The Halvorsen Group need a tool."
+        self.assertTrue(self.blocked(sow, "brown memo"))
+        self.assertEqual(self.blocked(sow, "the memo tool"), [])
+
     def test_name_starting_with_a_digit(self):
         self.assertTrue(self.blocked("The client is 3M.", "3m memo tool"))
 
