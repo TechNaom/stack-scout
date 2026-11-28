@@ -1,0 +1,620 @@
+# Technology names, lower case, one per line: GitHub featured topics (https://github.com/topics) plus clouds,
+# services, languages, databases and frameworks. Written 2026-11-28 (draft by gpt-oss-120b via the free-router,
+# reviewed; s3, ec2, lambda and a few AI names added by hand). Company names that are also topics stay in.
+aws
+azure
+google cloud
+gcp
+amazon s3
+aws ec2
+aws lambda
+cloudflare
+vercel
+netlify
+heroku
+firebase
+supabase
+digital ocean
+ibm cloud
+oracle cloud
+alibaba cloud
+aws cloudformation
+aws cloudwatch
+aws iam
+aws rds
+aws dynamodb
+aws aurora
+aws sagemaker
+aws glue
+aws redshift
+aws eks
+aws fargate
+aws sns
+aws sqs
+aws step functions
+aws kms
+aws cloudfront
+aws route53
+aws iam roles
+aws elb
+aws vpc
+aws cloudtrail
+aws s3 glacier
+aws batch
+aws elastic beanstalk
+aws amplify
+aws codepipeline
+azure devops
+azure functions
+azure storage
+azure sql
+azure cosmos db
+azure kubernetes service
+azure app service
+azure active directory
+azure virtual machines
+azure logic apps
+azure data factory
+azure synapse
+azure monitor
+azure cognitive services
+gcp compute engine
+gcp cloud storage
+gcp bigquery
+gcp cloud functions
+gcp cloud run
+gcp firestore
+gcp spanner
+gcp dataproc
+gcp dataflow
+gcp cloud sql
+gcp kubernetes engine
+gcp pub/sub
+gcp iam
+gcp cloud build
+gcp cloud run jobs
+gcp vertex ai
+gcp cloud scheduler
+python
+java
+javascript
+typescript
+c#
+c++
+go
+rust
+ruby
+php
+kotlin
+swift
+dart
+scala
+perl
+haskell
+elixir
+clojure
+r
+julia
+lua
+objective-c
+shell
+bash
+powershell
+sql
+html
+css
+scss
+less
+markdown
+yaml
+json
+xml
+toml
+ini
+csv
+protobuf
+graphql
+rest
+grpc
+soap
+oauth
+jwt
+sso
+saml
+api
+sdk
+cli
+docker
+kubernetes
+helm
+terraform
+ansible
+puppet
+chef
+jenkins
+gitlab ci
+github actions
+circleci
+travis ci
+teamcity
+azure pipelines
+bitbucket pipelines
+spinnaker
+nexus
+artifactory
+prometheus
+grafana
+new relic
+datadog
+splunk
+elastic stack
+logstash
+fluentd
+kibana
+zipkin
+jaeger
+opentelemetry
+istio
+linkerd
+envoy
+service mesh
+microservices
+serverless
+functions as a service
+event-driven architecture
+event sourcing
+cqrs
+domain-driven design
+clean architecture
+hexagonal architecture
+tdd
+bdd
+cicd
+devops
+sre
+cloud native
+infrastructure as code
+observability
+monitoring
+alerting
+incident management
+chaos engineering
+feature flags
+ab testing
+canary releases
+blue-green deployment
+rolling update
+docker compose
+podman
+containerd
+cri-o
+crio
+lxc
+lxd
+virtualbox
+vmware
+hyper-v
+kvm
+qemu
+openstack
+vagrant
+packer
+hashicorp vault
+consul
+etcd
+zookeeper
+rabbitmq
+kafka
+activemq
+pulsar
+redis
+memcached
+cassandra
+dynamo db
+postgres
+postgresql
+mysql
+mariadb
+sqlite
+oracle database
+sql server
+mongodb
+couchdb
+couchbase
+neo4j
+elasticsearch
+opensearch
+solr
+hbase
+bigtable
+firestore
+cloud firestore
+firebase realtime database
+snowflake
+redshift
+bigquery
+clickhouse
+presto
+trino
+hive
+impala
+druid
+vertica
+teradata
+greenplum
+timescaledb
+influxdb
+prometheus tsdb
+graphite
+grafana loki
+kibana lens
+mlflow
+airflow
+luigi
+dagster
+prefect
+argo workflows
+kubeflow
+jupyter
+jupyter notebook
+jupyterlab
+colab
+zeppelin
+r studio
+streamlit
+dash
+gradio
+fastapi
+django
+flask
+starlette
+sanic
+bottle
+tornado
+pyramid
+falcon
+quart
+express
+koa
+hapi
+nestjs
+sails.js
+meteor
+adonisjs
+spring
+spring boot
+spring cloud
+micronaut
+quarkus
+jakarta ee
+jakarta servlet
+jsf
+struts
+play framework
+grails
+ruby on rails
+sinatra
+hanami
+padrino
+laravel
+symfony
+codeigniter
+yii
+zend
+cakephp
+phalcon
+express.js
+nextjs
+nuxtjs
+gatsby
+remix
+sveltekit
+react
+react native
+angular
+vue
+vue.js
+ember.js
+backbone.js
+knockout.js
+alpine.js
+lit
+svelte
+solidjs
+preact
+stencil
+ionic
+capacitor
+cordova
+electron
+tauri
+flutter
+native script
+xamarin
+unity
+unreal engine
+godot
+blender
+opencv
+pytorch
+tensorflow
+keras
+scikit-learn
+xgboost
+lightgbm
+catboost
+mxnet
+theano
+pandas
+numpy
+scipy
+matplotlib
+seaborn
+plotly
+bokeh
+langchain
+openai
+anthropic
+claude
+gpt
+llm
+embedding
+vector database
+pinecone
+weaviate
+qdrant
+milvus
+faiss
+annoy
+hnswlib
+rag
+prompt engineering
+machine learning
+deep learning
+computer vision
+natural language processing
+speech recognition
+reinforcement learning
+generative ai
+diffusion models
+stable diffusion
+midjourney
+dall-e
+chatgpt
+bing chat
+claude ai
+gemini
+cohere
+huggingface
+transformers
+datasets
+tokenizers
+mlflow tracking
+mlflow models
+mlflow registry
+mlflow projects
+mlflow pipelines
+mlflow autologging
+mlflow serve
+mlflow ui
+mlflow server
+mlflow deployment
+mlflow experiment
+mlflow run
+mlflow artifacts
+mlflow logs
+mlflow metrics
+mlflow parameters
+mlflow tags
+mlflow notes
+stripe
+shopify
+salesforce
+slack
+jira
+notion
+hubspot
+twilio
+sendgrid
+zapier
+mailchimp
+intercom
+zoom
+microsoft teams
+discord
+github
+git
+gitlab
+bitbucket
+svn
+mercurial
+perforce
+bazaar
+phabricator
+gitea
+gogs
+trunk
+aws codecommit
+azure repos
+aws codebuild
+aws codedeploy
+aws codestar
+aws cloud9
+aws amplify console
+aws device farm
+aws app runner
+aws global accelerator
+aws outposts
+aws snowball
+aws snowflake
+aws local zones
+aws ground station
+aws elasticache
+aws elastic search service
+aws location service
+aws lake formation
+aws managed blockchain
+aws managed streaming for kafka
+aws mq
+aws secrets manager
+aws firewall manager
+aws guardduty
+aws inspector
+aws macie
+aws detective
+aws resource groups
+aws service catalog
+aws security hub
+aws transit gateway
+aws vpc peering
+aws waf
+aws workspaces
+aws x-ray
+azure ad b2c
+azure ad domain services
+azure ad identity protection
+azure ad privileged identity management
+azure ad sync
+azure analytics
+azure api management
+azure app configuration
+azure application gateway
+azure arc
+azure backup
+azure batch
+azure blockchain service
+azure cdn
+azure cognitive search
+azure container instances
+azure container registry
+azure cost management
+azure data lake
+azure data share
+azure data warehouse
+azure devtest labs
+azure dns
+azure frontdoor
+azure governance
+azure healthbot
+azure iot hub
+azure iot central
+azure key vault
+azure load balancer
+azure media services
+azure monitor logs
+azure notification hubs
+azure policy
+azure private link
+azure resource manager
+azure service bus
+azure signalr
+azure site recovery
+azure sql managed instance
+azure static web apps
+azure storage explorer
+azure stream analytics
+azure synapse analytics
+gcp cloud dns
+gcp cloud armor
+gcp cloud billing
+gcp cloud composer
+gcp cloud identity
+gcp cloud interconnect
+gcp cloud logging
+gcp cloud monitoring
+gcp cloud network security
+gcp cloud security command center
+gcp cloud source repositories
+gcp cloud shell
+gcp cloud talent solution
+gcp cloud tasks
+gcp cloud talent
+gcp cloud tpu
+gcp cloud video intelligence
+gcp data catalog
+gcp data loss prevention
+gcp datafusion
+gcp dataplex
+gcp datastream
+gcp deployment manager
+gcp dns
+gcp firewalls
+gcp functions
+gcp iap
+gcp logging
+gcp memorystore
+gcp operations suite
+gcp private google access
+gcp recaptcha
+gcp secret manager
+gcp service networking
+gcp tpu
+gcp vmware engine
+gcp workload identity federation
+gcp workload identity pools
+kotlin coroutines
+scala spark
+scala akka
+scala play
+scala slick
+scala cats
+scala circe
+scala http4s
+scala monix
+scala scalatest
+scala specs2
+scala sbt
+java spring security
+java hibernate
+java jakarta ee
+java junit
+java mockito
+java gradle
+java maven
+java ant
+java jenkins
+java sonar
+java checkstyle
+java spotbugs
+java lombok
+java jackson
+java gson
+java log4j
+java slf4j
+java spring data
+java spring batch
+java spring integration
+java spring cloud
+java spring amqp
+java spring websocket
+java spring mvc
+java spring boot starter
+java spring test
+java spring aop
+java spring security oauth2
+java spring cloud config
+java spring cloud gateway
+java spring cloud netflix
+java spring cloud function
+java spring cloud stream
+java spring cloud contract
+java spring cloud task
+java spring cloud dataflow
+java spring cloud dataflow server
+java spring cloud dataflow task
+java spring cloud dataflow streams
+java spring cloud dataflow scheduler
+java spring cloud dataflow skipper
+java spring cloud dataflow skipper server
+java spring cloud dataflow skipper ui
+java spring cloud dataflow skipper client
+java spring cloud dataflow skipper client ui
+java spring cloud dataflow skipper client server
+java spring cloud dataflow skipper client server ui
+java spring
+s3
+ec2
+lambda
+mistral
+llama
+ollama
