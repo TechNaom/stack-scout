@@ -5,7 +5,7 @@
         common.http_json("GET", api.url + "/repos/o/r")
 
 Routes match the method and the path without its query string. Each route returns its responses in order and
-repeats the last one. An unrouted path returns 404 {"message": "Not Found"}. Every request is recorded in
+repeats the last one; a bytes body is sent as is. An unrouted path returns 404 {"message": "Not Found"}. Every request is recorded in
 .requests as (method, full path with query, headers, parsed JSON body or None).
 """
 import json
@@ -62,9 +62,9 @@ class MockAPI:
                 except ValueError:
                     body = None
                 status, headers, resp = api._next(self.command, self.path, dict(self.headers.items()), body)
-                data = b"" if resp is None else json.dumps(resp).encode()
+                data = resp if isinstance(resp, bytes) else b"" if resp is None else json.dumps(resp).encode()
                 self.send_response(status)
-                if resp is not None:
+                if resp is not None and not isinstance(resp, bytes):
                     headers.setdefault("Content-Type", "application/json")
                 headers["Content-Length"] = str(len(data))
                 for name, value in headers.items():
@@ -75,7 +75,8 @@ class MockAPI:
             do_GET = do_POST = do_PUT = do_PATCH = do_DELETE = _handle
 
         self._server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
-        self._thread = threading.Thread(target=self._server.serve_forever, daemon=True)
+        self._thread = threading.Thread(target=self._server.serve_forever, kwargs={"poll_interval": 0.01},
+                                        daemon=True)
         self._thread.start()
         return self
 

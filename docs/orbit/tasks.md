@@ -52,7 +52,7 @@ Product-wide conventions (every card follows them):
 | T2 | Hand-written schemas and the schema checker | R12, N2 | `tests/test_schema.py`: good and bad examples for all 6 schemas | `python -m unittest tests.test_schema -v` OK | T1 | M | #2 (done, PR #39) |
 | T3 | First 5 labelled test SOWs | R2, N2, N3 | `tests/test_fixtures.py`: every SOW has a label entry that passes `labels.schema.json` | the fixture test is OK | T2 | M | #3 (done, PR #40) |
 | T4 | Shared core: clock, token, redaction, facts file, run meter, `run.py` | N1, N6, R9 | `tests/test_common.py` | the common test is OK | T2 | M | #4 (done, PR #41) |
-| T5 | HTTP client with back-off, and the mock API server | N6 | `tests/test_http.py` against `tests/mock_api.py` (200, 403, 429, Retry-After, 3 retries) | the http test is OK | T4 | M | #5 |
+| T5 | HTTP client with back-off, and the mock API server | N6 | `tests/test_http.py` against `tests/mock_api.py` (200, 403, 429, Retry-After, 3 retries) | the http test is OK | T4 | M | #5 (done) |
 | T6 | `guard.py` and its word lists | N3 | `tests/test_guard.py` incl. a private name that is also a tech term | the guard test is OK | T4 | M | #6 |
 | T7 | `facts.py verify`: batched GraphQL, REST-only mode, bot rule | R5, R6, N6 | `tests/test_facts_verify.py` against the mock server | the facts test is OK | T5, T6 | M | #7 |
 | T8 | `validate.py`: schema, subjects, required fields, prose rules | N2, R9, R10 | `tests/test_validate.py` with the good and bad prose lists | the validate test is OK | T2, T4 | M | #8 |
@@ -365,6 +365,8 @@ Serves: N6. Depends on: T4. Size: M. Issue: #5
 - `GITHUB_API = os.environ.get("STACK_SCOUT_GITHUB_API", "https://api.github.com")`, and likewise
   `OSV_API` (`STACK_SCOUT_OSV_API`, `https://api.osv.dev`) and `DEPSDEV_API` (`STACK_SCOUT_DEPSDEV_API`,
   `https://api.deps.dev`). Read at call time, not import time, so tests can change them.
+  **Built as functions** `github_api()`, `osv_api()`, `depsdev_api()` (a constant cannot be read at call time);
+  later cards call these.
 - `class RateLimited(Exception)`: has `.status` and `.reset_at` (epoch seconds or None).
 - `http_json(method: str, url: str, body: dict | None = None, token: str | None = None, retries: int = 3)
   -> tuple[int, dict | list | None]`: `urllib.request`, 30 s timeout, `User-Agent: stack-scout`,

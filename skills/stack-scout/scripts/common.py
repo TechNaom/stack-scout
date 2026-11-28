@@ -425,7 +425,7 @@ def http_json(
                     return status, None
                 try:
                     return status, json.loads(raw.decode())
-                except json.JSONDecodeError:
+                except ValueError:  # not JSON, or not UTF-8
                     return status, None
 
         except urllib.error.HTTPError as e:
@@ -447,11 +447,12 @@ def http_json(
 
                 if retry_after is not None:
                     try:
-                        wait = float(retry_after)
+                        seconds = float(retry_after)
+                    except ValueError:  # an HTTP date: fall back to the other headers
+                        seconds = -1.0
+                    if 0 <= seconds < float("inf"):  # also rejects nan
+                        wait = seconds
                         reset_at = time.time() + wait
-                    except ValueError:
-                        # Retry-After might be HTTP-date; ignore and fall back
-                        pass
 
                 if reset_at is None:  # no usable Retry-After
                     reset_header = hdrs.get("x-ratelimit-reset")
@@ -485,7 +486,7 @@ def http_json(
                     return 404, None
                 try:
                     return 404, json.loads(raw.decode())
-                except json.JSONDecodeError:
+                except ValueError:  # not JSON, or not UTF-8
                     return 404, None
 
             # Other HTTP errors

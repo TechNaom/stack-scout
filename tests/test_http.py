@@ -1,6 +1,8 @@
 """HTTP client (common.http_json) against the local mock API: back-off, rate limits, no token in errors."""
 import os
+import time
 import unittest
+from unittest import mock
 
 # The helpers module adjusts sys.path so that the scripts can be imported.
 from tests import helpers  # noqa: F401
@@ -10,7 +12,7 @@ from tests.mock_api import MockAPI
 
 class TestHTTP(unittest.TestCase):
     def setUp(self):
-        # Ensure back‑off sleeps are disabled for the tests.
+        # Ensure back-off sleeps are disabled for the tests.
         self._original_no_sleep = os.environ.get("STACK_SCOUT_NO_SLEEP")
         os.environ["STACK_SCOUT_NO_SLEEP"] = "1"
 
@@ -105,11 +107,57 @@ class TestHTTP(unittest.TestCase):
         method, path, headers, body = api.requests[0]
         self.assertEqual(method, "POST")
         self.assertEqual(path, "/x")
-        # Body should be JSON‑decoded (the mock parses it).
+        # Body should be JSON-decoded (the mock parses it).
         self.assertEqual(body, payload)
-        # User‑Agent header must be present.
+        # User-Agent header must be present.
         self.assertIn("User-Agent", headers)
         self.assertEqual(headers["User-Agent"], "stack-scout")
+
+    def test_403_without_rate_limit_header_is_an_error_after_one_request(self):
+        with MockAPI() as api:
+            api.route("GET", "/x", [(403, {}, {"message": "Forbidden"})])
+            with self.assertRaises(RuntimeError):
+                common.http_json("GET", f"{api.url}/x")
+        self.assertEqual(len(api.requests), 1)
+
+    def test_far_ratelimit_reset_raises_at_once_with_reset_at(self):
+        reset = int(time.time()) + 3600
+        with MockAPI() as api:
+            api.route("GET", "/x", [(403, {"x-ratelimit-remaining": "0", "x-ratelimit-reset": str(reset)}, None)])
+            with self.assertRaises(common.RateLimited) as ctx:
+                common.http_json("GET", f"{api.url}/x")
+        self.assertEqual(ctx.exception.reset_at, reset)
+        self.assertEqual(len(api.requests), 1)
+
+    def test_default_back_off_is_2_4_8_seconds(self):
+        os.environ.pop("STACK_SCOUT_NO_SLEEP", None)
+        with MockAPI() as api, mock.patch.object(common.time, "sleep") as sleep:
+            api.route("GET", "/x", [(429, {}, None)])
+            with self.assertRaises(common.RateLimited):
+                common.http_json("GET", f"{api.url}/x", retries=3)
+        self.assertEqual([c.args[0] for c in sleep.call_args_list], [2, 4, 8])
+
+    def test_bad_retry_after_values_fall_back_without_crashing(self):
+        os.environ.pop("STACK_SCOUT_NO_SLEEP", None)
+        for value in ("-5", "nan", "Wed, 21 Oct 2015 07:28:00 GMT"):
+            with self.subTest(value=value), MockAPI() as api, mock.patch.object(common.time, "sleep") as sleep:
+                api.route("GET", "/x", [(429, {"Retry-After": value}, None), (200, {}, {"ok": True})])
+                self.assertEqual(common.http_json("GET", f"{api.url}/x"), (200, {"ok": True}))
+                waits = [c.args[0] for c in sleep.call_args_list]
+                self.assertTrue(all(w == w and 0 <= w <= 60 for w in waits), waits)  # w == w is False for nan
+
+    def test_closed_port_raises_runtime_error_without_token(self):
+        token = "ghp_" + "y" * 36
+        with MockAPI() as api:
+            url = api.url
+        with self.assertRaises(RuntimeError) as ctx:
+            common.http_json("GET", f"{url}/x?t={token}", token=token)
+        self.assertNotIn(token, str(ctx.exception))
+
+    def test_non_utf8_body_returns_none(self):
+        with MockAPI() as api:
+            api.route("GET", "/x", [(200, {}, bytes([0xFF, 0xFE]) + b" not utf-8")])
+            self.assertEqual(common.http_json("GET", f"{api.url}/x"), (200, None))
 
 
 if __name__ == "__main__":
