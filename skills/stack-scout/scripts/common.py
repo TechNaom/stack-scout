@@ -22,6 +22,8 @@ import subprocess
 import sys
 import tempfile
 import time
+import urllib.error
+import urllib.request
 
 import schema
 
@@ -350,3 +352,147 @@ def emit(obj: dict) -> None:
 def utf8_stdout() -> None:
     if sys.stdout is not None and hasattr(sys.stdout, "reconfigure"):
         sys.stdout.reconfigure(encoding="utf-8")
+
+
+# HTTP: one client for GitHub, OSV and deps.dev, with back-off on rate limits (T5)
+
+def github_api() -> str:
+    """Return the GitHub API base URL (read at call time)."""
+    return os.environ.get("STACK_SCOUT_GITHUB_API", "https://api.github.com")
+
+
+def osv_api() -> str:
+    """Return the OSV API base URL (read at call time)."""
+    return os.environ.get("STACK_SCOUT_OSV_API", "https://api.osv.dev")
+
+
+def depsdev_api() -> str:
+    """Return the deps.dev API base URL (read at call time)."""
+    return os.environ.get("STACK_SCOUT_DEPSDEV_API", "https://api.deps.dev")
+
+
+class RateLimited(Exception):
+    """Raised when rate limit is hit and retries exhausted or wait would exceed 60 s."""
+
+    def __init__(self, status: int, reset_at: float | int | None = None, message: str = "rate limited"):
+        super().__init__(message)
+        self.status = status
+        self.reset_at = reset_at
+
+
+def http_json(
+    method: str,
+    url: str,
+    body: dict | None = None,
+    token: str | None = None,
+    retries: int = 3,
+) -> tuple[int, dict | list | None]:
+    """
+    Perform an HTTP request with JSON request/response, retrying on rate limits.
+
+    Args:
+        method: HTTP method (GET, POST, etc.).
+        url: Full request URL.
+        body: Optional JSON-serializable request body.
+        token: Optional bearer token for Authorization header.
+        retries: Number of retries on rate limit (total requests = retries + 1).
+
+    Returns:
+        (status_code, parsed_json_or_None) for 2xx and 404.
+
+    Raises:
+        RateLimited: Rate limit hit and retries exhausted or wait > 60 s.
+        RuntimeError: Other HTTP errors or network failures (token redacted).
+    """
+    data = json.dumps(body).encode() if body is not None else None
+    headers = {
+        "User-Agent": "stack-scout",
+        "Accept": "application/json",
+    }
+    if data is not None:
+        headers["Content-Type"] = "application/json"
+    if token:
+        headers["Authorization"] = f"Bearer {token}"
+
+    req = urllib.request.Request(url, data=data, headers=headers, method=method)
+
+    for attempt in range(retries + 1):
+        try:
+            with urllib.request.urlopen(req, timeout=30) as resp:
+                raw = resp.read()
+                status = resp.getcode()
+                if not raw:
+                    return status, None
+                try:
+                    return status, json.loads(raw.decode())
+                except json.JSONDecodeError:
+                    return status, None
+
+        except urllib.error.HTTPError as e:
+            status = e.code
+            hdrs = e.headers
+            raw = e.read() or b""
+            body_preview = raw[:300].decode(errors="replace")
+
+            # Rate limit: 429 or 403 with x-ratelimit-remaining == "0"
+            is_rate_limit = status == 429 or (
+                status == 403 and hdrs.get("x-ratelimit-remaining") == "0"
+            )
+
+            if is_rate_limit:
+                # Determine wait time and reset_at
+                retry_after = hdrs.get("Retry-After")
+                reset_at = None
+                wait = 0.0
+
+                if retry_after is not None:
+                    try:
+                        wait = float(retry_after)
+                        reset_at = time.time() + wait
+                    except ValueError:
+                        # Retry-After might be HTTP-date; ignore and fall back
+                        pass
+
+                if reset_at is None:  # no usable Retry-After
+                    reset_header = hdrs.get("x-ratelimit-reset")
+                    if reset_header is not None:
+                        try:
+                            reset_epoch = float(reset_header)
+                            reset_at = reset_epoch
+                            wait = max(0.0, reset_epoch - time.time())
+                        except ValueError:
+                            pass
+
+                if reset_at is None:  # neither header: back off 2, 4, 8 s
+                    wait = 2 ** (attempt + 1)  # 2, 4, 8, ...
+
+                # If wait > 60 s, raise immediately without sleeping
+                if wait > 60:
+                    raise RateLimited(status, reset_at)
+
+                # If we have retries left, sleep and continue
+                if attempt < retries:
+                    if os.environ.get("STACK_SCOUT_NO_SLEEP") != "1":
+                        time.sleep(wait)
+                    continue
+
+                # Retries exhausted
+                raise RateLimited(status, reset_at)
+
+            # 404 is not an error for this function
+            if status == 404:
+                if not raw:
+                    return 404, None
+                try:
+                    return 404, json.loads(raw.decode())
+                except json.JSONDecodeError:
+                    return 404, None
+
+            # Other HTTP errors
+            raise RuntimeError(redact(f"{method} {url} -> HTTP {status}: {body_preview}", token))
+
+        except (urllib.error.URLError, TimeoutError, OSError) as e:
+            reason = getattr(e, "reason", str(e))
+            raise RuntimeError(redact(f"{method} {url} failed: {reason}", token))
+
+    raise AssertionError("unreachable")  # every pass of the loop returns, retries or raises
