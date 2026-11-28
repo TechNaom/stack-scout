@@ -53,7 +53,7 @@ Product-wide conventions (every card follows them):
 | T3 | First 5 labelled test SOWs | R2, N2, N3 | `tests/test_fixtures.py`: every SOW has a label entry that passes `labels.schema.json` | the fixture test is OK | T2 | M | #3 (done, PR #40) |
 | T4 | Shared core: clock, token, redaction, facts file, run meter, `run.py` | N1, N6, R9 | `tests/test_common.py` | the common test is OK | T2 | M | #4 (done, PR #41) |
 | T5 | HTTP client with back-off, and the mock API server | N6 | `tests/test_http.py` against `tests/mock_api.py` (200, 403, 429, Retry-After, 3 retries) | the http test is OK | T4 | M | #5 (done) |
-| T6 | `guard.py` and its word lists | N3 | `tests/test_guard.py` incl. a private name that is also a tech term | the guard test is OK | T4 | M | #6 |
+| T6 | `guard.py` and its word lists | N3 | `tests/test_guard.py` incl. a private name that is also a tech term | the guard test is OK | T4 | M | #6 (done) |
 | T7 | `facts.py verify`: batched GraphQL, REST-only mode, bot rule | R5, R6, N6 | `tests/test_facts_verify.py` against the mock server | the facts test is OK | T5, T6 | M | #7 |
 | T8 | `validate.py`: schema, subjects, required fields, prose rules | N2, R9, R10 | `tests/test_validate.py` with the good and bad prose lists | the validate test is OK | T2, T4 | M | #8 |
 | T9 | `render.py`: `stack.md` from `stack.json` and the facts file | R7, R9, R10 | `tests/test_render.py`: golden file, every fact linked | the render test is OK | T8 | M | #9 |

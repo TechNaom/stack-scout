@@ -91,8 +91,8 @@ class LeakTest(unittest.TestCase):
         self.assertTrue(self.blocked("Straße Haulage needs a tool.", "strasse memo"))
 
     def test_runs_made_only_of_tech_and_common_words_are_not_names(self):
-        sow = "We use Google Cloud, Spring Boot and GitHub Actions with a REST API."
-        for query in ["google cloud storage", "spring boot memo", "github actions ci", "rest api dashboard python"]:
+        sow = "We use Google Cloud, Spring Boot and GitHub Actions with a REST API. Node.js runs it."
+        for query in ["google cloud storage", "spring boot memo", "github actions ci", "rest api dashboard python", "node.js power bi"]:
             self.assertEqual(self.blocked(sow, query), [], query)
         self.assertEqual(self.blocked("The Data Team reviews Monthly Reports.", "data team monthly reports"), [])
 
