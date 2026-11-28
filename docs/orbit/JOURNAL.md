@@ -5,6 +5,8 @@ file says what happened on the way and what it taught. The learn skill reads it.
 
 | When | Kind | What | Commit |
 |---|---|---|---|
+| 2026-11-28 | Fix in review | **T4 code check, 3 rounds:** concurrent meter writes were lost; the lock could be stolen in a race; a stale lock that could not be renamed (Windows) spun forever; a failed nonce write left an empty lock; no test stopped put-back overwriting a live lock; old side files piled up. Missed by: the builder (the card named locking but no failure cases on Windows). Lesson: cards for file locks list the rename-fails and write-fails paths and a child-process timeout test. | c32ef7d |
+| 2026-11-28 | Roadblock | **A code-check probe printed a real gh token into its transcript; the T4 builder ran `git checkout` and wiped uncommitted work (restored from a backup).** Every brief now forbids the real `gh`, reading tokens or env, and checkout/reset on uncommitted work. Owner told to revoke the token. | - |
 | 2026-11-27 | Fix in review | **T3 code check:** 7 of 12 fixture checks had no breaking test (mutants survived); an empty, blank or partial client name passed (substring match). Missed by: the builder. | 2c7bdc1 |
 | 2026-11-27 | Fix in review | **T3 code check:** brand denylist flagged "NVIDIA Tesla T4" and the SI unit tesla; only *.md files were listed; a binary labelled file crashed the checker. Missed by: the builder. | 2c7bdc1 |
 | 2026-11-27 | Fix in review | **T3 card:** its example client name "Halvorsen Freight" is close to real Norwegian firms (Halvorsen Frakt & Flytting AS); renamed to "Quillmere Haulage" after a web search. Missed by: the card (Assemble). Lesson: check invented names on the web before a public repo uses them. | 2c7bdc1 |

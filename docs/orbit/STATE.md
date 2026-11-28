@@ -51,6 +51,7 @@ Started: 2026-11-27
 
 ## Log
 
+- 2026-11-28 T4 done (PR #41, merge c32ef7d): shared core (common.py lock with nonce, safe put-back, run meter; run.py; rules.json). Tests 95 -> 158, 7 checks ok; CI 6/6 green. Task check pass; code check fixed in 3 rounds (lost writes, lock race, stale-lock spin, failed nonce write, put-back test, side files); 7/7 mutants killed. Known limit: two narrow plain-lock windows (an OS lock would close them; not needed for a single-user CLI). run.py is not metered. Next: T5 (#5).
 - 2026-11-27 T3 done (PR #40, squash 2c7bdc1): 5 invented labelled SOWs and the fixture checker. Tests 61 -> 95, 7 checks ok; CI 6/6 green on 7c8f8c6. Task check pass (every label read against its SOW); code check 0 must-fix, 5 should-fix, fixed in 1 round, re-check pass. Planted client renamed to "Quillmere Haulage" (the card example was close to real firms). Next: T4 (#4).
 - 2026-11-27 T2 done (PR #39, squash fd7bc36): stdlib schema checker and 6 schemas. Tests 9 -> 61, 7 checks ok; CI 6/6 green on 6f81213. Task check pass; code check 4 must-fix + 4 should-fix, fixed in 2 rounds, re-checks pass with mutants. Known gap: Python `\s` lacks U+FEFF. Next: T3 (#3).
 - 2026-11-27 T1 done (PR #38, squash 407d3fe): repo basics, MIT licence, plugin manifests, CI on 3 OS x Python 3.10/3.12. Tests 0 -> 9, `tests/check.py` 7 checks ok; CI 6/6 green on d070002. Task check pass; code check 0 must-fix, 5 should-fix, all fixed and re-checked. Next: T2 (#2).

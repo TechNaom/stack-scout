@@ -51,7 +51,7 @@ Product-wide conventions (every card follows them):
 | T1 | Repository basics, licence and CI on 3 platforms | N5, N7 | `tests/test_repo.py`: CI file has the 3-OS matrix and runs both suites | CI green on Linux, Windows and macOS for the pull request | - | S | #1 (done, PR #38) |
 | T2 | Hand-written schemas and the schema checker | R12, N2 | `tests/test_schema.py`: good and bad examples for all 6 schemas | `python -m unittest tests.test_schema -v` OK | T1 | M | #2 (done, PR #39) |
 | T3 | First 5 labelled test SOWs | R2, N2, N3 | `tests/test_fixtures.py`: every SOW has a label entry that passes `labels.schema.json` | the fixture test is OK | T2 | M | #3 (done, PR #40) |
-| T4 | Shared core: clock, token, redaction, facts file, run meter, `run.py` | N1, N6, R9 | `tests/test_common.py` | the common test is OK | T2 | M | #4 |
+| T4 | Shared core: clock, token, redaction, facts file, run meter, `run.py` | N1, N6, R9 | `tests/test_common.py` | the common test is OK | T2 | M | #4 (done, PR #41) |
 | T5 | HTTP client with back-off, and the mock API server | N6 | `tests/test_http.py` against `tests/mock_api.py` (200, 403, 429, Retry-After, 3 retries) | the http test is OK | T4 | M | #5 |
 | T6 | `guard.py` and its word lists | N3 | `tests/test_guard.py` incl. a private name that is also a tech term | the guard test is OK | T4 | M | #6 |
 | T7 | `facts.py verify`: batched GraphQL, REST-only mode, bot rule | R5, R6, N6 | `tests/test_facts_verify.py` against the mock server | the facts test is OK | T5, T6 | M | #7 |
